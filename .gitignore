@@ -1,0 +1,23 @@
+# Dependencias y compilados
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Secretos y entorno
+.env
+.env.*
+!.env.example
+
+# Claude Code (configuración personal)
+.claude/settings.local.json
+
+# Plataformas
+.vercel/
+.railway/
+
+# Sistema y editores
+.DS_Store
+*.log
+.idea/
+.vscode/
