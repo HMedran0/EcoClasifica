@@ -7,7 +7,7 @@ Ambos despliegan la rama `main` automáticamente. Railway espera a que pase el C
 | Servicio          | Dominio                                               |
 | ----------------- | ----------------------------------------------------- |
 | Backend (Railway) | https://ecoclasificabackend-production.up.railway.app |
-| Frontend (Vercel) | _pendiente_                                           |
+| Frontend (Vercel) | https://eco-clasifica.vercel.app                      |
 
 ## Orden (la primera vez)
 
@@ -24,15 +24,15 @@ Ambos despliegan la rama `main` automáticamente. Railway espera a que pase el C
 - Settings → Networking → _Generate Domain_. No definas `PORT`: Railway la inyecta.
 - Variables:
 
-| Variable                                           | Valor                                                                 |
-| -------------------------------------------------- | --------------------------------------------------------------------- |
-| `NODE_ENV`                                         | `production`                                                          |
-| `DEEPSEEK_API_KEY`                                 | secreta                                                               |
-| `DEEPSEEK_MODEL`, `DEEPSEEK_BASE_URL`              | solo si difieren del valor por defecto                                |
-| `SUPABASE_URL`                                     | `https://<proyecto>.supabase.co` (**sin** `/rest/v1`)                 |
-| `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_JWT_SECRET` | secretas                                                              |
-| `ALLOWED_ORIGINS`                                  | `https://<dominio-vercel>` (varios separados por coma; sin `/` final) |
-| `DEFAULT_MUNICIPALITY_CODE`                        | `13657`                                                               |
+| Variable                                           | Valor                                                                         |
+| -------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `NODE_ENV`                                         | `production`                                                                  |
+| `DEEPSEEK_API_KEY`                                 | secreta                                                                       |
+| `DEEPSEEK_MODEL`, `DEEPSEEK_BASE_URL`              | solo si difieren del valor por defecto                                        |
+| `SUPABASE_URL`                                     | `https://<proyecto>.supabase.co` (**sin** `/rest/v1`)                         |
+| `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_JWT_SECRET` | secretas                                                                      |
+| `ALLOWED_ORIGINS`                                  | `https://eco-clasifica.vercel.app` (varios separados por coma; sin `/` final) |
+| `DEFAULT_MUNICIPALITY_CODE`                        | `13657`                                                                       |
 
 ## 2. Vercel (frontend)
 
@@ -52,7 +52,7 @@ Cambiar una variable `VITE_*` exige redesplegar: se fijan al compilar.
 
 ```bash
 API=https://ecoclasificabackend-production.up.railway.app
-WEB=https://<dominio-vercel>
+WEB=https://eco-clasifica.vercel.app
 
 curl -s $API/api/health                      # {"status":"ok",...}
 
@@ -74,11 +74,13 @@ cd frontend && VITE_API_URL=https://ejemplo.up.railway.app npm run build   # lo 
 
 ## Fallos típicos
 
-| Síntoma                                                        | Causa probable                                                             |
-| -------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| «Sin conexión» en Vercel, pero `curl` a `/api/health` responde | `ALLOWED_ORIGINS` sin el dominio exacto de Vercel (esquema, sin `/` final) |
-| El build de Vercel falla con «VITE_API_URL debe ser…»          | Falta la variable en Vercel                                                |
-| Vercel no encuentra `@ecoclasifica/shared`                     | _Include source files outside of the Root Directory_ desactivado           |
-| Railway no despliega tras el push                              | El CI falló (_Wait for CI_)                                                |
-| Healthcheck de Railway falla                                   | Variable con formato inválido (p. ej. `SUPABASE_URL` con ruta); ver logs   |
-| Las vistas previas de Vercel dan «Sin conexión»                | Normal: su dominio no está en `ALLOWED_ORIGINS`                            |
+| Síntoma                                                          | Causa probable                                                                    |
+| ---------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| «Sin conexión» en Vercel, pero `curl` a `/api/health` responde   | `ALLOWED_ORIGINS` sin el dominio exacto de Vercel (esquema, sin `/` final)        |
+| `/api/health` 200 pero clasificar da 500 `INTERNAL_ERROR` rápido | Secreto vacío (p. ej. `DEEPSEEK_API_KEY`); buscar el `requestId` en _Deploy Logs_ |
+| El origen de Vercel no recibe `Access-Control-Allow-Origin`      | `ALLOWED_ORIGINS` con el valor por defecto `http://localhost:5173`                |
+| El build de Vercel falla con «VITE_API_URL debe ser…»            | Falta la variable en Vercel                                                       |
+| Vercel no encuentra `@ecoclasifica/shared`                       | _Include source files outside of the Root Directory_ desactivado                  |
+| Railway no despliega tras el push                                | El CI falló (_Wait for CI_)                                                       |
+| Healthcheck de Railway falla                                     | Variable con formato inválido (p. ej. `SUPABASE_URL` con ruta); ver logs          |
+| Las vistas previas de Vercel dan «Sin conexión»                  | Normal: su dominio no está en `ALLOWED_ORIGINS`                                   |
