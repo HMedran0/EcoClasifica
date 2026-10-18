@@ -4,6 +4,8 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY shared/package.json shared/
 COPY backend/package.json backend/
+# npm ci exige el package.json de todos los workspaces del lockfile, aunque solo se construya el backend.
+COPY frontend/package.json frontend/
 RUN npm ci
 COPY tsconfig.base.json ./
 COPY shared shared
@@ -16,6 +18,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY shared/package.json shared/
 COPY backend/package.json backend/
+COPY frontend/package.json frontend/
 RUN npm ci --omit=dev -w backend
 COPY --from=build /app/backend/dist backend/dist
 USER node

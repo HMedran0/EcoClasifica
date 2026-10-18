@@ -1,0 +1,38 @@
+<!doctype html>
+<!-- Solo desarrollo (Vite lo sirve en /dev/medir-ancho.html; no entra en el build).
+     Carga una ruta en iframes de anchos fijos y publica las medidas en #resultado como JSON. -->
+<html lang="es">
+  <body style="margin: 0">
+    <pre id="resultado">midiendo…</pre>
+    <script type="module">
+      const params = new URLSearchParams(location.search);
+      const ruta = params.get('ruta') ?? '/';
+      const anchos = (params.get('anchos') ?? '360,412').split(',').map(Number);
+
+      const medir = (ancho) =>
+        new Promise((resolve) => {
+          const iframe = Object.assign(document.createElement('iframe'), { src: ruta });
+          iframe.style.cssText = `width:${ancho}px;height:800px;border:0`;
+          iframe.addEventListener('load', () =>
+            setTimeout(() => {
+              const doc = iframe.contentDocument;
+              const raiz = doc.documentElement;
+              const desbordan = [...doc.querySelectorAll('body *')]
+                .filter((n) => n.getBoundingClientRect().right > raiz.clientWidth + 0.5)
+                .map((n) => `${n.tagName.toLowerCase()}.${n.className}`);
+              resolve({
+                ancho,
+                scrollWidth: raiz.scrollWidth,
+                clientWidth: raiz.clientWidth,
+                desbordan,
+              });
+            }, 500),
+          );
+          document.body.append(iframe);
+        });
+
+      const medidas = await Promise.all(anchos.map(medir));
+      document.getElementById('resultado').textContent = JSON.stringify(medidas);
+    </script>
+  </body>
+</html>

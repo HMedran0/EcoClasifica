@@ -1,4 +1,5 @@
 {
+  // shared/tsconfig.json copia estas opciones (no puede extenderlo, ADR-17): mantener en sincronía.
   "compilerOptions": {
     "target": "ES2022",
     "lib": ["ES2022"],

@@ -1,13 +1,13 @@
 # Frontend — reglas específicas
 
-Aún no está creado el proyecto Vite (se hace en la fase F2, ver `frontend/README.md`).
-
-- Stack: React 18 + Vite + TypeScript + Tailwind (Mobile-First) + `vite-plugin-pwa` + Zustand + React Router.
-- Tipos y esquemas: importar de `@ecoclasifica/shared`. No redefinir interfaces de la API.
-- Estructura por funcionalidades: `src/features/{camera,classify,upcycle,chat,history,favorites,auth}`.
-- Cámara: `getUserMedia` con cámara trasera; alternativa de galería si se niega el permiso.
-- Imagen: comprimir en un `canvas` (lado largo 768 px, JPEG ~0,7, objetivo ≤ 300 KB) antes de enviar.
-- PWA: `display: standalone`, Service Worker con precache del app shell y **network-only para `/api/*`**. Nunca cachear escaneos.
-- Supabase: solo la **anon key** (`VITE_SUPABASE_ANON_KEY`). Nunca la service role.
-- Accesibilidad: contraste AA, objetivos táctiles ≥ 48 px, textos en español.
-- Pruebas con Vitest + Testing Library; la API se simula con MSW o funciones inyectadas.
+- Stack: React 19 + Vite 8 + TypeScript 5.9 + Tailwind 4 (Mobile-First) + React Router 8 + Zustand 5. `vite-plugin-pwa` llega en HU-01; Supabase, en F4.
+- Contrato: `import … from '@ecoclasifica/shared'` resuelve por **alias de Vite y `paths` de tsconfig** hacia `../shared/src` (ADR-17). No es una dependencia del `package.json`: no la añadas. `zod` es dependencia directa (v3, la misma API que `shared`).
+- No redefinir tipos de la API. Para el cuerpo de una solicitud usa `z.input<typeof scanRequestSchema>`.
+- API: solo a través de `src/api/client.ts` (timeout de 25 s, respuesta validada con Zod). Errores → `ApiError` con `code` y mensaje en español (`src/api/errors.ts`); muestra `err.message`, nunca el texto del backend.
+- Estructura: `src/app` (router), `src/api`, `src/features/{home,camera,classify,upcycle,chat,history,favorites,auth}`, `src/styles`, `src/test`.
+- Paleta (tokens en `src/styles/index.css`): `lima` solo acentos y botones grandes, **nunca texto sobre blanco**; `hoja` solo en texto grande (≥ 24 px); `bosque` y `petroleo` para texto normal.
+- Objetivos táctiles ≥ 48 px: `min-h-tactil` / `min-w-tactil`. Tema claro, contraste AA, textos en español.
+- Cámara: `getUserMedia` con cámara trasera; galería si se niega el permiso. Imagen comprimida en `canvas` (768 px, JPEG ~0,7, ≤ 300 KB).
+- PWA (HU-01): `display: standalone`, precache del app shell y **network-only para `/api/*`**. Nunca cachear escaneos.
+- Pruebas: Vitest 5 + Testing Library + jsdom. Inyecta `fetchFn` en `createApiClient`; no llames al backend real.
+- Los matchers de jest-dom se registran en `src/test/setup.ts` con `expect.extend`: **no** uses `@testing-library/jest-dom/vitest` (cargaría el Vitest 2 del backend).
