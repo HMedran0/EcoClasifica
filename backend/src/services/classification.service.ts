@@ -35,6 +35,8 @@ export async function classifyScan(
     mimeType: req.mimeType,
   });
   if (!data.is_waste) {
+    // Se registran las métricas porque la llamada a la IA también cuesta; nunca se guarda en el historial.
+    log.info({ mode: 'classify', ...usage, latencyMs, notAWaste: true }, 'Escaneo sin residuo');
     throw new AppError('NOT_A_WASTE', 'No encontramos un residuo en la foto, intenta con otra');
   }
   const lowConfidence = data.confidence < LOW_CONFIDENCE_THRESHOLD;
@@ -56,6 +58,21 @@ function pickDisposal(rule: Disposal | null, lowConfidence: boolean): Disposal |
   return !lowConfidence || rule.requiresDropOff ? rule : null;
 }
 
+type Alternative = AiClassifyOutput['alternatives'][number];
+
+/** Las 2 mejores hipótesis: sin el material principal, sin repetidos (gana la certeza mayor), ordenadas. */
+export function pickAlternatives(data: AiClassifyOutput): Alternative[] {
+  const best = new Map<Alternative['material'], number>();
+  for (const { material, confidence } of data.alternatives) {
+    if (material === data.material) continue;
+    best.set(material, Math.max(confidence, best.get(material) ?? 0));
+  }
+  return [...best]
+    .map(([material, confidence]) => ({ material, confidence }))
+    .sort((a, b) => b.confidence - a.confidence)
+    .slice(0, 2);
+}
+
 function toClassifyResponse(
   data: AiClassifyOutput,
   lowConfidence: boolean,
@@ -71,7 +88,7 @@ function toClassifyResponse(
       materialDetail: data.material_detail,
       confidence: data.confidence,
       lowConfidence,
-      alternatives: data.alternatives,
+      alternatives: pickAlternatives(data),
     },
     disposal,
     saved: false,

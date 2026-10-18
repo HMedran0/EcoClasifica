@@ -7,6 +7,23 @@ export const notFound: RequestHandler = (req, _res, next) => {
   next(new AppError('NOT_FOUND', `Ruta no encontrada: ${req.method} ${req.path}`));
 };
 
+/**
+ * Un solo código para imagen inválida: si falla el campo `image` (tamaño o formato) se responde
+ * INVALID_IMAGE aunque fallen otros campos, porque sin imagen usable no hay escaneo posible.
+ */
+function fromZodError(err: ZodError): AppError {
+  const imageIssue = err.issues.find((issue) => issue.path[0] === 'image');
+  if (imageIssue) {
+    // Solo los límites de tamaño traen mensaje propio en español en el esquema; el resto es de Zod (inglés).
+    const isSizeIssue = imageIssue.code === 'too_small' || imageIssue.code === 'too_big';
+    return new AppError(
+      'INVALID_IMAGE',
+      isSizeIssue ? imageIssue.message : 'Falta la imagen o no está en Base64',
+    );
+  }
+  return new AppError('VALIDATION_ERROR', 'Los datos enviados no son válidos', err.flatten());
+}
+
 export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
   const requestId = String(req.id ?? '');
 
@@ -14,7 +31,7 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
   if (err instanceof AppError) {
     appError = err;
   } else if (err instanceof ZodError) {
-    appError = new AppError('VALIDATION_ERROR', 'Los datos enviados no son válidos', err.flatten());
+    appError = fromZodError(err);
   } else if (err?.type === 'entity.too.large') {
     appError = new AppError('PAYLOAD_TOO_LARGE', 'El cuerpo de la solicitud es demasiado grande');
   } else if (typeof err?.type === 'string' && err?.status === 400) {

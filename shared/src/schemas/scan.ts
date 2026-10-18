@@ -39,9 +39,10 @@ export const classifyResponseSchema = z.object({
     materialDetail: z.string(),
     confidence: z.number().min(0).max(1),
     lowConfidence: z.boolean(),
-    alternatives: z.array(
-      z.object({ material: z.enum(MATERIALS), confidence: z.number().min(0).max(1) }),
-    ),
+    /** Hasta 2 hipótesis distintas del material principal, de mayor a menor certeza. */
+    alternatives: z
+      .array(z.object({ material: z.enum(MATERIALS), confidence: z.number().min(0).max(1) }))
+      .max(2),
   }),
   /** `null` cuando la certeza es baja (el cliente muestra las alternativas). */
   disposal: disposalSchema.nullable(),
