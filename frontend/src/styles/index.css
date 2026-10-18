@@ -1,0 +1,29 @@
+@import 'tailwindcss';
+
+/* Paleta de marca. Lima solo para acentos y botones grandes: nunca texto sobre blanco (contraste). */
+@theme {
+  --color-lima: #86c423;
+  --color-hoja: #42963f;
+  --color-bosque: #0c5a3b;
+  --color-petroleo: #03393b;
+  --color-fondo: #f7faf5;
+
+  /* Objetivo táctil mínimo (48 px): clases `min-h-tactil` y `min-w-tactil`. */
+  --spacing-tactil: 3rem;
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+
+  body {
+    @apply bg-fondo text-petroleo antialiased;
+    font-family:
+      system-ui,
+      -apple-system,
+      'Segoe UI',
+      Roboto,
+      sans-serif;
+  }
+}

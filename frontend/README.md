@@ -1,13 +1,52 @@
-# Frontend (se crea en la fase F2)
+# Frontend — EcoClasifica
 
-Todavía no hay proyecto Vite. Pasos para crearlo en la sesión de F2 (Claude Code los ejecuta):
+PWA en React 19 + Vite 8 + Tailwind 4. Se despliega en Vercel.
 
-1. Crear el proyecto dentro de esta carpeta (conservando `CLAUDE.md`, `vercel.json` y `.env.example`):
-   `npm create vite@latest frontend -- --template react-ts` desde la raíz y mover el contenido, o crearlo en una carpeta temporal y copiarlo aquí.
-2. Nombrar el paquete `@ecoclasifica/frontend` y añadir `"frontend"` a `workspaces` en el `package.json` raíz.
-3. Dependencias: `@ecoclasifica/shared` (`"*"`), `react-router-dom`, `zustand`, `@supabase/supabase-js`, `tailwindcss`, `vite-plugin-pwa`.
-4. Configurar `vite-plugin-pwa`: `registerType: 'prompt'`, manifiesto (`display: standalone`, íconos 192/512 y _maskable_), Workbox con precache del app shell y `NetworkOnly` para `/api/*`.
-5. Estructura por funcionalidades (`src/features/{camera,classify,upcycle,chat,history,favorites,auth}`), ver `docs/arquitectura.md`.
-6. Despliegue en Vercel: directorio raíz `frontend/`, comando `vite build`, variables `VITE_API_URL`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`.
+## Comandos (desde la raíz)
 
-Historias de esta fase: HU-01, HU-02, HU-03 (ver `docs/BACKLOG.md`).
+```bash
+npm run dev:web                   # http://localhost:5173
+npm run build -w frontend         # dist/
+npm test -w frontend -- --reporter=dot
+npm run check                     # typecheck + lint + pruebas de todo el monorepo
+npm run check:layout -w frontend  # sin scroll horizontal a 360 y 412 px (con dev:web en marcha; no corre en CI)
+```
+
+`VITE_API_URL` (ver `.env.example`) apunta al backend: `http://localhost:3000` en local, Railway en producción.
+
+## Estructura
+
+```
+frontend/
+├── index.html
+├── vite.config.ts        # alias @ecoclasifica/shared → ../shared/src, dedupe de zod, Vitest
+├── tsconfig.json         # autónomo; paths hacia ../shared/src y zod
+├── dev/                # medir-ancho.html: solo desarrollo, no entra en el build
+├── scripts/            # check-overflow.mjs (usa Chrome headless)
+├── vercel.json           # SPA rewrites; sin caché para sw.js y el manifiesto
+├── public/brand/         # logo.svg (la referencia original está en docs/brand/)
+└── src/
+    ├── main.tsx
+    ├── app/App.tsx       # rutas: / y /resultado
+    ├── api/              # client.ts (fetch + timeout 25 s + Zod), errors.ts (código → mensaje)
+    ├── features/         # home, classify (y camera, upcycle, chat… según las historias)
+    ├── styles/index.css  # Tailwind + tokens de marca (@theme)
+    └── test/             # setup de Vitest y tipos de jest-dom
+```
+
+## Contrato compartido (ADR-17)
+
+El frontend **no** depende del paquete `@ecoclasifica/shared`: lo lee como código fuente con un alias de Vite y `paths` de tsconfig. Así Vercel puede instalar y construir solo con `frontend/` y `shared/`, sin el `package.json` de la raíz. Por eso `shared/tsconfig.json` es autónomo (no extiende `tsconfig.base.json`).
+
+## Despliegue en Vercel
+
+- Directorio raíz: `frontend/`. Comando de build: `npm run build`. Salida: `dist`.
+- Activar **«Include files outside the Root Directory in the Build Step»** (viene activo por defecto): sin `shared/` no hay contrato.
+- `VITE_API_URL` es obligatoria en producción: sin ella las llamadas van al propio dominio de Vercel, el rewrite devuelve `index.html` y todo acaba en «respuesta inesperada».
+- Variables: `VITE_API_URL` (y en F4 `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`).
+- En Railway, `ALLOWED_ORIGINS` debe incluir el dominio de Vercel.
+
+## Pendiente por historia
+
+- HU-02: cámara (`features/camera`). HU-17: pantalla de resultado (`features/classify`).
+- HU-01: `vite-plugin-pwa`, manifiesto e íconos (incluida la variante _maskable_).

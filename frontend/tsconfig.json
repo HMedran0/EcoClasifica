@@ -1,0 +1,26 @@
+{
+  // Autónomo (sin extender ../tsconfig.base.json): Vercel construye con solo frontend/ y shared/.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "types": ["vite/client", "node"],
+    // El contrato se lee como código fuente (ADR-17), no como paquete. `zod` se resuelve desde el
+    // frontend porque `shared/` no tiene node_modules propio en Vercel.
+    "paths": {
+      "@ecoclasifica/shared": ["../shared/src/index.ts"],
+      "zod": ["./node_modules/zod", "../node_modules/zod"]
+    }
+  },
+  "include": ["src", "vite.config.ts"]
+}
