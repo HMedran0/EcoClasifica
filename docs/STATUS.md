@@ -4,33 +4,37 @@ _Actualizado: 2026-10-18 · Reescribir completo en cada `/handoff` (≤ 40 líne
 
 ## Fase actual
 
-**F0 — Preparar: cerrada.** Siguiente fase: F1 (backend), empezando por HU-05.
+**F1 — Backend: en curso.** HU-05 hecha (rama `feat/HU-05-clasificar`). Faltan HU-06 y HU-07.
 
-## Hecho en F0
+## Hecho en HU-05
 
-- Modelo verificado en la doc oficial: `deepseek-flash` acepta imágenes Base64 (`image_url` + data URI), solo en mensajes `user`.
-- Spike real: 12/12 llamadas (3 fotos × classify/upcycle × `detail` low/auto) con JSON válido según `shared`.
-  Classify ≈ 400 tokens de entrada / 90 de salida, ~1,6 s. Upcycle ≈ 380 / 230, ~2,5 s. `response_format` funciona con imágenes.
-- Supabase creado y verificado: `0001_init.sql` y `seed.sql` ejecutados; `disposal_rules` DEFAULT=12 y 13657=12.
-  `SUPABASE_SERVICE_ROLE_KEY` usa la clave nueva `sb_secret_`.
-- `env.ts`: variables vacías (`KEY=`) cuentan como no definidas; `SUPABASE_URL` con ruta (p. ej. `/rest/v1/`) se rechaza.
+- `POST /api/v1/scan/classify`: valida cuerpo (Zod), Base64, tamaño ≤ 4 MB y MIME real por bytes → `INVALID_IMAGE`.
+- `classification.service` mapea la IA al contrato y calcula `lowConfidence` (< 0,60). `is_waste: false` → 422 `NOT_A_WASTE`.
+- Por ahora `disposal: null`, `scanId: null`, `saved: false` (contenedor = HU-06; guardado = HU-04).
+- Log por escaneo: tokens y latencia (`Escaneo completado`), sin imagen ni Base64 (verificado en el log real).
+- Revisión de seguridad: JSON roto → 400 sin loguear el cuerpo; rate limit antes del parser; tope de longitud Base64 antes de decodificar.
+- 11 pruebas de integración + 5 unitarias de imagen; incluye 429, 502, 504 y mimeType ≠ bytes. Total 30 en verde.
+- Prueba real (`fotos-prueba/frasco.jpeg`, PORT=3001): vidrio, certeza 0,95, 416/90 tokens, 1,6 s.
 
 ## Decisiones
 
-- ADR-13: `thinking: { type: 'disabled' }` en escaneos y chat. Con el razonamiento activo se truncaba upcycle (5/6 fallos con 384).
-- `max_tokens` 384 se mantiene (salida máx. observada 239).
-- `DEEPSEEK_IMAGE_DETAIL` queda sin definir: low y auto dieron lo mismo a 768 px.
-- HU-04: validar el token con `supabase.auth.getUser(token)`; `SUPABASE_JWT_SECRET` no se usa (queda vacía).
-- Desarrollo local en `PORT=3001` (el 3000 lo usa otra app del equipo).
+- ADR-14: `createApp()` crea el `DeepSeekProvider` de forma perezosa (`lazyAiProvider`) y el rate limiter por instancia (`createScanLimiter`).
+- `NOT_A_WASTE` se movió a HU-05; **HU-07 conserva solo baja certeza y alternativas**.
+- ADR-13 sigue: `thinking` desactivado; `max_tokens` 384.
+- HU-04: validar el token con `supabase.auth.getUser(token)`; `SUPABASE_JWT_SECRET` no se usa.
+- Desarrollo local en `PORT=3001`.
 
 ## Problemas abiertos
 
-1. **Upcycle no rechaza no-residuos:** con una pared de ladrillos devolvió ideas. Resolver en HU-09.
-2. Código DANE `13657` y normativa de contenedores del municipio por confirmar.
+1. Upcycle no rechaza no-residuos (pared de ladrillos → ideas). Resolver en HU-09.
+2. Código DANE `13657` y normativa de contenedores del municipio por confirmar (afecta HU-06).
+3. Revisión: `image` y `locale` sin `.max()` en `scanRequestSchema` (cambio de contrato → HU-06/07 con `api.md`); `optionalAuth` en `/scan/*` llega con HU-04.
+4. Progreso y cancelar (criterio 2 de HU-05) quedan para el frontend (F2); el backend corta a 20 s con `AI_TIMEOUT`.
 
 ## Siguiente acción
 
-`/clear` → `/status` → `/story HU-05` (rama `feat/HU-05-clasificar`).
+Commit y merge de `feat/HU-05-clasificar` → `/clear` → `/story HU-06` (rama `feat/HU-06-contenedor`):
+leer `disposal_rules` desde Supabase (repositorio nuevo) y rellenar `disposal` cuando la certeza ≥ 0,60.
 
 ## Pendiente de crear
 

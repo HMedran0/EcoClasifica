@@ -17,8 +17,15 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
     appError = new AppError('VALIDATION_ERROR', 'Los datos enviados no son válidos', err.flatten());
   } else if (err?.type === 'entity.too.large') {
     appError = new AppError('PAYLOAD_TOO_LARGE', 'El cuerpo de la solicitud es demasiado grande');
+  } else if (typeof err?.type === 'string' && err?.status === 400) {
+    // Errores de body-parser (JSON roto, codificación): traen `err.body` con el texto crudo; no se loguean.
+    appError = new AppError('VALIDATION_ERROR', 'El cuerpo de la solicitud no es JSON válido');
   } else {
-    logger.error({ err, requestId }, 'Error no controlado');
+    // Solo mensaje y pila: las propiedades del error podrían contener la imagen.
+    logger.error(
+      { error: { message: err?.message, stack: err?.stack }, requestId },
+      'Error no controlado',
+    );
     appError = new AppError('INTERNAL_ERROR', 'Ocurrió un error inesperado');
   }
 
