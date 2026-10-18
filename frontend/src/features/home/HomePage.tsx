@@ -1,3 +1,5 @@
+import { ServiceStatus } from './ServiceStatus';
+
 export function HomePage() {
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center gap-6 px-6 text-center">
@@ -9,6 +11,7 @@ export function HomePage() {
       <p className="max-w-xs text-base text-bosque">
         Clasifica tus residuos con IA y dales una segunda vida.
       </p>
+      <ServiceStatus />
     </main>
   );
 }

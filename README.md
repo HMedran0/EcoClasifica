@@ -59,6 +59,8 @@ El proyecto está preparado para desarrollarse con Claude Code gastando poco con
 
 ## Despliegue
 
+Guía paso a paso (orden, variables, dominios y prueba de humo): [`docs/despliegue.md`](docs/despliegue.md).
+
 - **Backend (Railway):** `railway.json` apunta a `backend/Dockerfile`; healthcheck en `/api/health`. Cargar las variables del `.env.example` en el panel.
 - **Frontend (Vercel):** directorio raíz `frontend/`, comando `vite build`, `frontend/vercel.json` ya incluye la reescritura para React Router.
 - Definir `ALLOWED_ORIGINS` en Railway con el dominio de Vercel, y `VITE_API_URL` en Vercel con el dominio de Railway.

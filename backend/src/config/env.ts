@@ -62,6 +62,19 @@ const definedVars = Object.fromEntries(
 export const env = envSchema.parse(definedVars);
 export type Env = typeof env;
 
+/** Opcionales en desarrollo y pruebas, pero sin ellas producción solo responde 500 al escanear. */
+export const PRODUCTION_REQUIRED_VARS = [
+  'DEEPSEEK_API_KEY',
+  'SUPABASE_URL',
+  'SUPABASE_SERVICE_ROLE_KEY',
+] as const;
+
+/** Nombres (nunca valores) de las variables obligatorias que faltan; vacío fuera de producción. */
+export function missingProductionVars(config: Env): string[] {
+  if (config.NODE_ENV !== 'production') return [];
+  return PRODUCTION_REQUIRED_VARS.filter((key) => !config[key]);
+}
+
 /** Devuelve el valor de una variable opcional o falla con un mensaje claro al usarla. */
 export function requireEnv<K extends keyof Env>(key: K): NonNullable<Env[K]> {
   const value = env[key];

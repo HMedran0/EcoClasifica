@@ -1,6 +1,13 @@
 import { createApp } from './app';
-import { env } from './config/env';
+import { env, missingProductionVars } from './config/env';
 import { logger } from './utils/logger';
+
+// Aquí y no en createApp: las pruebas crean la app sin estas variables.
+const missing = missingProductionVars(env);
+if (missing.length > 0) {
+  logger.fatal({ missing }, `Faltan variables de entorno obligatorias: ${missing.join(', ')}`);
+  process.exit(1);
+}
 
 const app = createApp();
 
