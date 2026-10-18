@@ -1,5 +1,6 @@
 import {
   MAX_IMAGE_BYTES,
+  MAX_LOCALE_LENGTH,
   classifyResponseSchema,
   type AiClassifyOutput,
 } from '@ecoclasifica/shared';
@@ -168,15 +169,27 @@ describe('POST /api/v1/scan/classify', () => {
     expect(classify).not.toHaveBeenCalled();
   });
 
-  it('responde 400 INVALID_IMAGE si la imagen supera 4 MB', async () => {
+  it('responde 400 VALIDATION_ERROR si la imagen supera 4 MB (antes de decodificar)', async () => {
     const big = Buffer.concat([jpegBytes, Buffer.alloc(MAX_IMAGE_BYTES)]);
+    const classify = resolving(bottle);
     const res = await request(
-      createApp({ disposalRepo: fakeDisposalRepo(), aiProvider: fakeAi(resolving(bottle)) }),
+      createApp({ disposalRepo: fakeDisposalRepo(), aiProvider: fakeAi(classify) }),
     )
       .post(URL)
       .send({ image: big.toString('base64'), mimeType: 'image/jpeg' });
     expect(res.status).toBe(400);
-    expect(res.body.error.code).toBe('INVALID_IMAGE');
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(classify).not.toHaveBeenCalled();
+  });
+
+  it('responde 400 VALIDATION_ERROR si locale es demasiado largo', async () => {
+    const res = await request(
+      createApp({ disposalRepo: fakeDisposalRepo(), aiProvider: fakeAi(resolving(bottle)) }),
+    )
+      .post(URL)
+      .send({ ...validBody, locale: 'x'.repeat(MAX_LOCALE_LENGTH + 1) });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
   });
 
   it('responde 502 AI_BAD_RESPONSE con el mensaje para el usuario', async () => {

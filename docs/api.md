@@ -23,6 +23,8 @@ Sin token, los endpoints de escaneo funcionan pero no guardan nada (`saved: fals
 
 Solicitud: `{ image: <base64 sin prefijo>, mimeType: 'image/jpeg', locale?: 'es-CO', municipalityCode?: '13657' }`
 
+Límites: `image` ≤ 5 592 408 caracteres Base64 (4 MB decodificados), `locale` ≤ 35, `municipalityCode` ≤ 20. Superarlos → 400 `VALIDATION_ERROR` sin llamar a la IA. Aplican también a `/scan/upcycle` (mismo esquema).
+
 Respuesta 200:
 
 ```json
@@ -103,7 +105,7 @@ Forma única: `{ "error": { "code": "...", "message": "...", "requestId": "..." 
 | HTTP | `code`              | Cuándo                                         |
 | ---- | ------------------- | ---------------------------------------------- |
 | 400  | `VALIDATION_ERROR`  | El cuerpo no cumple el esquema                 |
-| 400  | `INVALID_IMAGE`     | Falta imagen, tipo no permitido o > 4 MB       |
+| 400  | `INVALID_IMAGE`     | Base64 inválido o tipo real no permitido       |
 | 401  | `UNAUTHORIZED`      | Token ausente o inválido en endpoint protegido |
 | 404  | `NOT_FOUND`         | No existe o no es del usuario                  |
 | 413  | `PAYLOAD_TOO_LARGE` | Cuerpo > 6 MB                                  |
