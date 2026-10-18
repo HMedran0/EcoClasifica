@@ -22,7 +22,7 @@ Estados: Pendiente · En curso · Hecha. Prioridad: M = MVP, D = deseable. Cada 
 | HU-14 | Eliminar registros                                       | D    | F4   | Pendiente |
 | HU-15 | Ver mis favoritos                                        | M    | F4   | Pendiente |
 | HU-16 | Estadísticas personales                                  | D    | F4   | Pendiente |
-| HU-17 | Pantalla de resultado (UI de HU-05, HU-06 y HU-07)       | M    | F2   | Pendiente |
+| HU-17 | Pantalla de resultado (UI de HU-05, HU-06 y HU-07)       | M    | F2   | Hecha     |
 
 ## Fases y criterios de salida
 
@@ -34,7 +34,7 @@ Estados: Pendiente · En curso · Hecha. Prioridad: M = MVP, D = deseable. Cada 
 | F3 Upcycle  | `POST /scan/upcycle`, ideas, chat paso a paso                                   | Flujo B completo con chat                                        |
 | F4 Cuentas  | Auth (correo verificado y Google), historial, favoritos, RLS, pruebas de acceso | Lighthouse ≥ 90 (Performance y PWA) y RLS probado entre usuarios |
 
-Orden de F2: `chore/F2-base` ✅ (proyecto Vite + Tailwind, workspace) → despliegue ✅ (Vercel + CORS con Railway, `chore/F2-despliegue`) → HU-02 ✅ → HU-17 → HU-01.
+Orden de F2: `chore/F2-base` ✅ (proyecto Vite + Tailwind, workspace) → despliegue ✅ (Vercel + CORS con Railway, `chore/F2-despliegue`) → HU-02 ✅ → HU-17 ✅ → HU-01.
 
 Después del MVP: empaquetado con Capacitor y publicación en Google Play.
 

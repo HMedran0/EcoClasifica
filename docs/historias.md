@@ -67,6 +67,20 @@ Como usuario, quiero marcar «el resultado es incorrecto» y elegir el material 
 
 ## Épica B — Modo Dar Segunda Vida
 
+## HU-17 (M) Pantalla de resultado del Modo Clasificar
+
+Como usuario, quiero ver con claridad qué es el residuo y dónde va, para depositarlo bien sin pensarlo.
+
+- Dado que la certeza es ≥ 0,60 y hay `disposal`, entonces veo la miniatura de mi foto, el objeto, el material (con su detalle), la certeza en % y una tarjeta del contenedor con su color, ícono, nombre e instrucción.
+- Dado que `requiresDropOff` es verdadero (también con baja certeza), entonces veo «Llevar a punto limpio» con su instrucción y no un contenedor doméstico.
+- Dado que `lowConfidence` es verdadero, entonces veo «No estoy seguro», hasta 2 alternativas y el botón «Repetir foto».
+- Dado que `disposal` es null sin baja certeza (regla no disponible), entonces veo el material y «No pudimos obtener dónde depositarlo; intenta de nuevo» con «Reintentar».
+- Dado que la respuesta es `NOT_A_WASTE`, entonces veo «No parece un residuo» y «Tomar otra foto».
+- Dado que la respuesta tarda, entonces veo un indicador de progreso y puedo «Cancelar», que aborta la petición y vuelve a la cámara.
+- El color nunca es la única señal: el nombre del contenedor va en texto, el contenedor blanco lleva borde visible, el contraste es AA y el resultado se anuncia con aria-live.
+
+Fuera de alcance: corregir el resultado (HU-08) y guardar en el historial.
+
 ## HU-09 (M) Recibir ideas de upcycle
 
 Como usuario, quiero 3 ideas creativas para reutilizar el objeto.
