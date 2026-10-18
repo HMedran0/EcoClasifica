@@ -1,13 +1,15 @@
 /**
  * FASE F0 — Prueba real de la IA con una foto.
- * Uso: npm run spike:ai -- ./foto.jpg classify|upcycle
+ * Uso: npm run spike:ai -- ./foto.jpg classify|upcycle [low|auto]
+ * El tercer argumento sobreescribe DEEPSEEK_IMAGE_DETAIL. Las rutas relativas se resuelven
+ * desde donde se lanzó npm (INIT_CWD), normalmente la raíz del repo.
  * Muestra solo el JSON, los tokens y la latencia (no imprime el Base64).
  */
 import { readFile } from 'node:fs/promises';
-import { extname } from 'node:path';
+import { extname, resolve } from 'node:path';
 import type { ImageMime } from '@ecoclasifica/shared';
 import { env, requireEnv } from '../src/config/env';
-import { DeepSeekProvider } from '../src/services/ai/deepseek.provider';
+import { DeepSeekProvider, type ImageDetail } from '../src/services/ai/deepseek.provider';
 
 const MIME_BY_EXT: Record<string, ImageMime> = {
   '.jpg': 'image/jpeg',
@@ -17,9 +19,9 @@ const MIME_BY_EXT: Record<string, ImageMime> = {
 };
 
 async function main() {
-  const [file, mode = 'classify'] = process.argv.slice(2);
-  if (!file || !['classify', 'upcycle'].includes(mode)) {
-    console.error('Uso: npm run spike:ai -- <foto.jpg|png|webp> [classify|upcycle]');
+  const [file, mode = 'classify', detailArg] = process.argv.slice(2);
+  if (!file || !['classify', 'upcycle'].includes(mode) || !isDetail(detailArg)) {
+    console.error('Uso: npm run spike:ai -- <foto.jpg|png|webp> [classify|upcycle] [low|auto]');
     process.exit(1);
   }
   const mimeType = MIME_BY_EXT[extname(file).toLowerCase()];
@@ -28,7 +30,7 @@ async function main() {
     process.exit(1);
   }
 
-  const bytes = await readFile(file);
+  const bytes = await readFile(resolve(process.env.INIT_CWD ?? process.cwd(), file));
   console.error(`Imagen: ${(bytes.length / 1024).toFixed(0)} KB (objetivo ≤ 300 KB)`);
 
   const provider = new DeepSeekProvider({
@@ -38,6 +40,7 @@ async function main() {
     maxTokens: env.DEEPSEEK_MAX_TOKENS,
     chatMaxTokens: env.DEEPSEEK_CHAT_MAX_TOKENS,
     timeoutMs: env.DEEPSEEK_TIMEOUT_MS,
+    imageDetail: detailArg ?? env.DEEPSEEK_IMAGE_DETAIL,
   });
 
   const image = { base64: bytes.toString('base64'), mimeType };
@@ -46,8 +49,12 @@ async function main() {
 
   console.log(JSON.stringify(result.data, null, 2));
   console.error(
-    `Tokens: ${result.usage.promptTokens} entrada / ${result.usage.completionTokens} salida · ${result.latencyMs} ms`,
+    `detail: ${detailArg ?? env.DEEPSEEK_IMAGE_DETAIL ?? '(no enviado)'} · Tokens: ${result.usage.promptTokens} entrada / ${result.usage.completionTokens} salida · ${result.latencyMs} ms`,
   );
+}
+
+function isDetail(v: string | undefined): v is ImageDetail | undefined {
+  return v === undefined || v === 'low' || v === 'auto';
 }
 
 main().catch((err) => {

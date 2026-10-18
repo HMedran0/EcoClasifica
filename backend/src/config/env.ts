@@ -20,6 +20,8 @@ const envSchema = z.object({
   DEEPSEEK_MAX_TOKENS: z.coerce.number().int().positive().default(384),
   DEEPSEEK_CHAT_MAX_TOKENS: z.coerce.number().int().positive().default(512),
   DEEPSEEK_TIMEOUT_MS: z.coerce.number().int().positive().default(20_000),
+  // Opcional: vacía o ausente → no se envía `detail` (el proveedor decide).
+  DEEPSEEK_IMAGE_DETAIL: z.enum(['low', 'auto']).optional(),
 
   SUPABASE_URL: z.string().url().optional(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
@@ -37,7 +39,12 @@ const envSchema = z.object({
   DEFAULT_MUNICIPALITY_CODE: z.string().default('13657'),
 });
 
-export const env = envSchema.parse(process.env);
+// Una variable vacía (`KEY=` copiada de .env.example) cuenta como no definida.
+const definedVars = Object.fromEntries(
+  Object.entries(process.env).filter(([, value]) => value !== ''),
+);
+
+export const env = envSchema.parse(definedVars);
 export type Env = typeof env;
 
 /** Devuelve el valor de una variable opcional o falla con un mensaje claro al usarla. */

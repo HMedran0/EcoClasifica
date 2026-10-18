@@ -46,6 +46,17 @@ describe('DeepSeekProvider', () => {
     expect(body.max_tokens).toBe(384);
     expect(body.response_format).toEqual({ type: 'json_object' });
     expect(body.messages[1].content[1].image_url.url).toMatch(/^data:image\/jpeg;base64,/);
+    expect(body.messages[1].content[1].image_url).not.toHaveProperty('detail');
+  });
+
+  it('envía detail en image_url cuando imageDetail está configurado', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(completion(goodClassify));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await new DeepSeekProvider({ ...cfg, imageDetail: 'low' }).classify(image);
+
+    const body = JSON.parse(fetchMock.mock.calls[0]![1].body);
+    expect(body.messages[1].content[1].image_url.detail).toBe('low');
   });
 
   it('reintenta una vez si el JSON es inválido y suma los tokens', async () => {

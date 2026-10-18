@@ -16,6 +16,9 @@ coverage/
 .vercel/
 .railway/
 
+# Fotos locales del spike de IA (F0)
+fotos-prueba/
+
 # Sistema y editores
 .DS_Store
 *.log
