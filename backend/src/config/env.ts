@@ -10,7 +10,22 @@ for (const file of ['.env', '../.env']) {
   }
 }
 
-const envSchema = z.object({
+// El cliente de Supabase añade `/rest/v1` por su cuenta: con ruta, PostgREST responde PGRST125.
+export const supabaseUrlSchema = z
+  .string()
+  .url()
+  .refine(
+    (value) => {
+      const url = new URL(value);
+      return url.pathname === '/' && !url.search && !url.hash;
+    },
+    {
+      message:
+        'SUPABASE_URL debe ser solo https://<proyecto>.supabase.co, sin ruta (como /rest/v1/)',
+    },
+  );
+
+export const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(3000),
 
@@ -23,7 +38,7 @@ const envSchema = z.object({
   // Opcional: vacía o ausente → no se envía `detail` (el proveedor decide).
   DEEPSEEK_IMAGE_DETAIL: z.enum(['low', 'auto']).optional(),
 
-  SUPABASE_URL: z.string().url().optional(),
+  SUPABASE_URL: supabaseUrlSchema.optional(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
   SUPABASE_JWT_SECRET: z.string().optional(),
 
