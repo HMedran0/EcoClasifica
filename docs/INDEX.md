@@ -13,7 +13,7 @@ No leas todo. Busca tu tarea y carga solo lo indicado (con `Grep`/`Read` y `limi
 | Estructura de carpetas              | `arquitectura.md` §Estructura                            |                                         |
 | Decisión de arquitectura            | `DECISIONS.md`                                           | Solo si hay duda; añadir ADR al decidir |
 | Fases y criterios de salida         | `BACKLOG.md` §Fases                                      | Con `/phase-check`                      |
-| Despliegue (Railway/Vercel)         | `README.md` §Despliegue + `arquitectura.md` §Despliegue  |                                         |
+| Despliegue (Railway/Vercel)         | `despliegue.md`                                          | Orden, variables, dominios, humo        |
 | Cómo ahorrar contexto               | `METODOLOGIA-CONTEXTO.md`                                | Una vez                                 |
 | Primer prompt para Claude Code      | `INICIO-CLAUDE-CODE.md`                                  | Solo el humano lo usa                   |
 

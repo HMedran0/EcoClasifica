@@ -17,6 +17,8 @@ Base: `/api/v1` (salud en `/api/health`). JSON siempre. Auth: `Authorization: Be
 | DELETE | `/api/v1/favorites/:id` | Sí       | Quita una favorita                      |
 | GET    | `/api/health`           | No       | Estado del servicio                     |
 
+Respuesta de `/api/health` (`healthResponseSchema`): `{ status: 'ok', service: 'ecoclasifica-api', time: <ISO 8601> }`. La pantalla inicial la usa como indicador de conexión (prueba de humo de CORS).
+
 Sin token, los endpoints de escaneo funcionan pero no guardan nada (`saved: false`).
 
 ## POST /scan/classify

@@ -17,3 +17,6 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npm run build
+        env:
+          # El build de producción del frontend exige VITE_API_URL (vite.config.ts); aquí basta una URL local.
+          VITE_API_URL: http://localhost:3000

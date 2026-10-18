@@ -145,3 +145,27 @@ describe('api.classify', () => {
     expect((await apiErrorOf(pending)).code).toBe('ABORTED');
   });
 });
+
+describe('api.health', () => {
+  const healthy = { status: 'ok', service: 'ecoclasifica-api', time: '2026-10-18T12:00:00.000Z' };
+
+  it('envía un GET simple (sin cuerpo ni Content-Type, sin preflight) a /api/health', async () => {
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(200, healthy));
+    await expect(client(fetchFn).health()).resolves.toEqual(healthy);
+    const [url, init] = fetchFn.mock.calls[0]!;
+    expect(url).toBe('https://api.test/api/health');
+    expect(init?.method).toBe('GET');
+    expect(init?.body).toBeUndefined();
+    expect(init?.headers).toBeUndefined();
+  });
+
+  it('rechaza con UNEXPECTED_RESPONSE si responde algo que no es el backend', async () => {
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(200, { ok: true }));
+    expect((await apiErrorOf(client(fetchFn).health())).code).toBe('UNEXPECTED_RESPONSE');
+  });
+
+  it('rechaza con NETWORK_ERROR si CORS o la red bloquean la solicitud', async () => {
+    const fetchFn = vi.fn<typeof fetch>().mockRejectedValue(new TypeError('Failed to fetch'));
+    expect((await apiErrorOf(client(fetchFn).health())).code).toBe('NETWORK_ERROR');
+  });
+});
