@@ -8,6 +8,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createApp } from '../src/app';
 import type { AiProvider } from '../src/services/ai/ai.provider';
 import { AppError } from '../src/utils/appError';
+import { fakeDisposalRepo } from './helpers/disposalRules';
 
 const URL = '/api/v1/scan/classify';
 const jpegBytes = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(200)]);
@@ -40,7 +41,9 @@ const resolving = (data: AiClassifyOutput) =>
 describe('POST /api/v1/scan/classify', () => {
   it('devuelve material, objeto y certeza según el contrato', async () => {
     const classify = resolving(bottle);
-    const res = await request(createApp({ aiProvider: fakeAi(classify) }))
+    const res = await request(
+      createApp({ disposalRepo: fakeDisposalRepo(), aiProvider: fakeAi(classify) }),
+    )
       .post(URL)
       .send(validBody);
 
@@ -58,13 +61,72 @@ describe('POST /api/v1/scan/classify', () => {
   });
 
   it('marca lowConfidence cuando la certeza es menor a 0,60', async () => {
-    const app = createApp({ aiProvider: fakeAi(resolving({ ...bottle, confidence: 0.4 })) });
+    const app = createApp({
+      disposalRepo: fakeDisposalRepo(),
+      aiProvider: fakeAi(resolving({ ...bottle, confidence: 0.4 })),
+    });
     const res = await request(app).post(URL).send(validBody);
     expect(res.body.result.lowConfidence).toBe(true);
   });
 
+  it('devuelve el contenedor de disposal_rules cuando la certeza es ≥ 0,60', async () => {
+    const app = createApp({
+      disposalRepo: fakeDisposalRepo(),
+      aiProvider: fakeAi(resolving({ ...bottle, material: 'vidrio', confidence: 0.95 })),
+    });
+    const res = await request(app).post(URL).send(validBody);
+    expect(res.status).toBe(200);
+    expect(res.body.disposal).toEqual({
+      binCode: 'WHITE',
+      binName: 'Contenedor blanco (aprovechables)',
+      colorHex: '#F5F5F5',
+      icon: 'bin-white',
+      instructions: 'Enjuágalo; si está roto, envuélvelo en papel.',
+      requiresDropOff: false,
+    });
+  });
+
+  it('devuelve disposal null cuando la certeza es menor a 0,60', async () => {
+    const app = createApp({
+      disposalRepo: fakeDisposalRepo(),
+      aiProvider: fakeAi(resolving({ ...bottle, confidence: 0.4 })),
+    });
+    const res = await request(app).post(URL).send(validBody);
+    expect(res.body.disposal).toBeNull();
+  });
+
+  it.each(['electronico', 'peligroso'] as const)(
+    'indica punto limpio para %s aunque la certeza sea baja',
+    async (material) => {
+      const app = createApp({
+        disposalRepo: fakeDisposalRepo(),
+        aiProvider: fakeAi(resolving({ ...bottle, material, confidence: 0.4 })),
+      });
+      const res = await request(app).post(URL).send(validBody);
+      expect(res.body.result.lowConfidence).toBe(true);
+      expect(res.body.disposal).toMatchObject({
+        binCode: 'DROP_OFF',
+        binName: 'Punto limpio',
+        requiresDropOff: true,
+      });
+    },
+  );
+
+  it('clasifica igual con disposal null si las reglas no cargan', async () => {
+    const repo = fakeDisposalRepo();
+    repo.listAll.mockRejectedValue(new Error('Supabase caído'));
+    const app = createApp({ disposalRepo: repo, aiProvider: fakeAi(resolving(bottle)) });
+    const res = await request(app).post(URL).send(validBody);
+    expect(res.status).toBe(200);
+    expect(res.body.result.material).toBe('plastico');
+    expect(res.body.disposal).toBeNull();
+  });
+
   it('responde 422 NOT_A_WASTE si la imagen no contiene un residuo', async () => {
-    const app = createApp({ aiProvider: fakeAi(resolving({ ...bottle, is_waste: false })) });
+    const app = createApp({
+      disposalRepo: fakeDisposalRepo(),
+      aiProvider: fakeAi(resolving({ ...bottle, is_waste: false })),
+    });
     const res = await request(app).post(URL).send(validBody);
     expect(res.status).toBe(422);
     expect(res.body.error.code).toBe('NOT_A_WASTE');
@@ -72,7 +134,9 @@ describe('POST /api/v1/scan/classify', () => {
 
   it('responde 400 VALIDATION_ERROR si el cuerpo no cumple el esquema', async () => {
     const classify = resolving(bottle);
-    const res = await request(createApp({ aiProvider: fakeAi(classify) }))
+    const res = await request(
+      createApp({ disposalRepo: fakeDisposalRepo(), aiProvider: fakeAi(classify) }),
+    )
       .post(URL)
       .send({ image: validBody.image, mimeType: 'image/gif' });
     expect(res.status).toBe(400);
@@ -82,7 +146,9 @@ describe('POST /api/v1/scan/classify', () => {
 
   it('responde 400 INVALID_IMAGE si los bytes no son una imagen', async () => {
     const classify = resolving(bottle);
-    const res = await request(createApp({ aiProvider: fakeAi(classify) }))
+    const res = await request(
+      createApp({ disposalRepo: fakeDisposalRepo(), aiProvider: fakeAi(classify) }),
+    )
       .post(URL)
       .send({ image: Buffer.alloc(200, 0x41).toString('base64'), mimeType: 'image/jpeg' });
     expect(res.status).toBe(400);
@@ -92,7 +158,9 @@ describe('POST /api/v1/scan/classify', () => {
 
   it('responde 400 INVALID_IMAGE si el mimeType declarado no coincide con los bytes', async () => {
     const classify = resolving(bottle);
-    const res = await request(createApp({ aiProvider: fakeAi(classify) }))
+    const res = await request(
+      createApp({ disposalRepo: fakeDisposalRepo(), aiProvider: fakeAi(classify) }),
+    )
       .post(URL)
       .send({ ...validBody, mimeType: 'image/png' });
     expect(res.status).toBe(400);
@@ -102,7 +170,9 @@ describe('POST /api/v1/scan/classify', () => {
 
   it('responde 400 INVALID_IMAGE si la imagen supera 4 MB', async () => {
     const big = Buffer.concat([jpegBytes, Buffer.alloc(MAX_IMAGE_BYTES)]);
-    const res = await request(createApp({ aiProvider: fakeAi(resolving(bottle)) }))
+    const res = await request(
+      createApp({ disposalRepo: fakeDisposalRepo(), aiProvider: fakeAi(resolving(bottle)) }),
+    )
       .post(URL)
       .send({ image: big.toString('base64'), mimeType: 'image/jpeg' });
     expect(res.status).toBe(400);
@@ -115,7 +185,9 @@ describe('POST /api/v1/scan/classify', () => {
       .mockRejectedValue(
         new AppError('AI_BAD_RESPONSE', 'No pudimos analizar la imagen, intenta de nuevo'),
       );
-    const res = await request(createApp({ aiProvider: fakeAi(classify) }))
+    const res = await request(
+      createApp({ disposalRepo: fakeDisposalRepo(), aiProvider: fakeAi(classify) }),
+    )
       .post(URL)
       .send(validBody);
     expect(res.status).toBe(502);
@@ -129,7 +201,9 @@ describe('POST /api/v1/scan/classify', () => {
     const classify = vi
       .fn<AiProvider['classify']>()
       .mockRejectedValue(new AppError('AI_TIMEOUT', 'El análisis tardó demasiado'));
-    const res = await request(createApp({ aiProvider: fakeAi(classify) }))
+    const res = await request(
+      createApp({ disposalRepo: fakeDisposalRepo(), aiProvider: fakeAi(classify) }),
+    )
       .post(URL)
       .send(validBody);
     expect(res.status).toBe(504);
@@ -137,7 +211,10 @@ describe('POST /api/v1/scan/classify', () => {
   });
 
   it('responde 429 RATE_LIMITED después de 10 escaneos por minuto', async () => {
-    const app = createApp({ aiProvider: fakeAi(resolving(bottle)) });
+    const app = createApp({
+      disposalRepo: fakeDisposalRepo(),
+      aiProvider: fakeAi(resolving(bottle)),
+    });
     for (let i = 0; i < 10; i++) {
       expect((await request(app).post(URL).send(validBody)).status).toBe(200);
     }
@@ -149,7 +226,9 @@ describe('POST /api/v1/scan/classify', () => {
 
 describe('cuerpo malformado', () => {
   it('responde 400 VALIDATION_ERROR con JSON roto (no 500)', async () => {
-    const res = await request(createApp({ aiProvider: fakeAi(resolving(bottle)) }))
+    const res = await request(
+      createApp({ disposalRepo: fakeDisposalRepo(), aiProvider: fakeAi(resolving(bottle)) }),
+    )
       .post(URL)
       .set('Content-Type', 'application/json')
       .send('{"image":"AAAA');

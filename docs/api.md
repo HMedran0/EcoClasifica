@@ -49,7 +49,12 @@ Respuesta 200:
 }
 ```
 
-Si `lowConfidence` es `true`, `disposal` es `null` y el cliente muestra las `alternatives` en lugar de un contenedor definitivo (HU-07).
+`disposal` sale de la tabla `disposal_rules` (ADR-7), nunca de la IA; `binName` se devuelve tal como está en la tabla:
+
+- Municipio: `municipalityCode` de la solicitud o, si falta, `DEFAULT_MUNICIPALITY_CODE` (`13657`).
+- Resolución: `(material, municipio)` → `(material, 'DEFAULT')` → regla `BLACK` de `DEFAULT` (con advertencia en el log).
+- Si `lowConfidence` es `true`, `disposal` es `null` y el cliente muestra las `alternatives` (HU-07), **salvo** que la regla exija punto limpio (`requiresDropOff: true`, p. ej. `electronico` y `peligroso`): entonces se devuelve igual.
+- Las reglas se cachean en memoria 10 min por instancia. Si Supabase falla se usa la caché vencida (y se reintenta al minuto); sin caché, `disposal` es `null` (error en el log) y la clasificación responde 200 igualmente.
 
 ## POST /scan/upcycle
 
