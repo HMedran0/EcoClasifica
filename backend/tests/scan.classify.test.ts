@@ -294,7 +294,10 @@ describe('baja certeza y no residuo (HU-07)', () => {
         { material: 'metal', confidence: 0.3 },
       ],
     };
-    const app = createApp({ disposalRepo: fakeDisposalRepo(), aiProvider: fakeAi(resolving(data)) });
+    const app = createApp({
+      disposalRepo: fakeDisposalRepo(),
+      aiProvider: fakeAi(resolving(data)),
+    });
     const res = await request(app).post(URL).send(validBody);
     expect(res.body.result.lowConfidence).toBe(true);
     expect(res.body.disposal).toBeNull();
@@ -326,7 +329,10 @@ describe('baja certeza y no residuo (HU-07)', () => {
         { material: 'vidrio', confidence: 0.1 },
       ],
     };
-    const app = createApp({ disposalRepo: fakeDisposalRepo(), aiProvider: fakeAi(resolving(data)) });
+    const app = createApp({
+      disposalRepo: fakeDisposalRepo(),
+      aiProvider: fakeAi(resolving(data)),
+    });
     const res = await request(app).post(URL).send(validBody);
     expect(res.body.result.alternatives).toEqual([{ material: 'vidrio', confidence: 0.1 }]);
   });
