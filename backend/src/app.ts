@@ -5,8 +5,9 @@ import helmet from 'helmet';
 import { pinoHttp } from 'pino-http';
 import { env } from './config/env';
 import { errorHandler, notFound } from './middlewares/errorHandler';
-import { routes, v1Routes } from './routes';
-import type { AiProvider } from './services/ai/ai.provider';
+import { createScanLimiter } from './middlewares/rateLimit';
+import { createV1Routes, routes } from './routes';
+import { lazyAiProvider, type AiProvider } from './services/ai';
 import { logger } from './utils/logger';
 
 export interface AppDeps {
@@ -14,7 +15,8 @@ export interface AppDeps {
   aiProvider?: AiProvider;
 }
 
-export function createApp(_deps: AppDeps = {}) {
+export function createApp(deps: AppDeps = {}) {
+  const aiProvider = deps.aiProvider ?? lazyAiProvider();
   const app = express();
 
   // Detrás del proxy de Railway: necesario para ver la IP real en el rate limiting.
@@ -30,11 +32,13 @@ export function createApp(_deps: AppDeps = {}) {
       allowedHeaders: ['Content-Type', 'Authorization'],
     }),
   );
+  // Antes del parser: se rechaza el exceso sin leer ni parsear hasta 6 MB por petición.
+  app.use('/api/v1/scan', createScanLimiter());
   // 6 MB: la imagen (≤ 4 MB) viaja en Base64, que pesa ~33 % más.
   app.use(express.json({ limit: '6mb' }));
 
   app.use('/api', routes);
-  app.use('/api/v1', v1Routes);
+  app.use('/api/v1', createV1Routes({ aiProvider }));
 
   app.use(notFound);
   app.use(errorHandler);

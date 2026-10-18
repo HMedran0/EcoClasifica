@@ -17,3 +17,4 @@ Formato: decisión · motivo. Añadir al final con `/handoff` cuando se decida a
 | ADR-11 | `max_tokens` 384 en escaneos; 512 en chat (`DEEPSEEK_CHAT_MAX_TOKENS`, ajustable)  | 384 es poco para pasos de fabricación; se valida en F0/F3.           |
 | ADR-12 | Ramas por historia + `STATUS.md` como memoria entre sesiones                       | Metodología de contexto (`METODOLOGIA-CONTEXTO.md`).                 |
 | ADR-13 | DeepSeek con `thinking: { type: 'disabled' }` en escaneos y chat                   | El razonamiento consume `max_tokens` y truncaba el JSON; más rápido y barato. |
+| ADR-14 | `createApp()` crea el `DeepSeekProvider` de forma perezosa y un rate limiter por instancia | Health y pruebas sin `DEEPSEEK_API_KEY`; cada prueba con su contador. |
