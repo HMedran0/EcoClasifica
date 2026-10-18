@@ -169,7 +169,7 @@ describe('POST /api/v1/scan/classify', () => {
     expect(classify).not.toHaveBeenCalled();
   });
 
-  it('responde 400 VALIDATION_ERROR si la imagen supera 4 MB (antes de decodificar)', async () => {
+  it('responde 400 INVALID_IMAGE si la imagen supera 4 MB (antes de decodificar)', async () => {
     const big = Buffer.concat([jpegBytes, Buffer.alloc(MAX_IMAGE_BYTES)]);
     const classify = resolving(bottle);
     const res = await request(
@@ -178,7 +178,7 @@ describe('POST /api/v1/scan/classify', () => {
       .post(URL)
       .send({ image: big.toString('base64'), mimeType: 'image/jpeg' });
     expect(res.status).toBe(400);
-    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(res.body.error.code).toBe('INVALID_IMAGE');
     expect(classify).not.toHaveBeenCalled();
   });
 
@@ -247,5 +247,100 @@ describe('cuerpo malformado', () => {
       .send('{"image":"AAAA');
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe('VALIDATION_ERROR');
+  });
+});
+
+describe('validación de la imagen (un solo código)', () => {
+  const post = (body: object) => {
+    const classify = resolving(bottle);
+    const app = createApp({ disposalRepo: fakeDisposalRepo(), aiProvider: fakeAi(classify) });
+    return { classify, req: request(app).post(URL).send(body) };
+  };
+
+  it.each([
+    ['falta', { mimeType: 'image/jpeg' }],
+    ['no es texto', { image: 12345, mimeType: 'image/jpeg' }],
+    ['es demasiado corta', { image: 'AAAA', mimeType: 'image/jpeg' }],
+  ])('responde 400 INVALID_IMAGE si la imagen %s', async (_caso, body) => {
+    const { classify, req } = post(body);
+    const res = await req;
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('INVALID_IMAGE');
+    expect(res.body.error.message).not.toMatch(/required|expected/i);
+    expect(classify).not.toHaveBeenCalled();
+  });
+
+  it('prioriza INVALID_IMAGE si también fallan otros campos', async () => {
+    const { req } = post({ image: 'AAAA', mimeType: 'image/gif' });
+    const res = await req;
+    expect(res.body.error.code).toBe('INVALID_IMAGE');
+  });
+
+  it('mantiene VALIDATION_ERROR si la imagen es válida y falla otro campo', async () => {
+    const { req } = post({ ...validBody, mimeType: 'image/gif' });
+    const res = await req;
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+  });
+});
+
+describe('baja certeza y no residuo (HU-07)', () => {
+  it('con certeza baja devuelve las 2 mejores hipótesis ordenadas', async () => {
+    const data: AiClassifyOutput = {
+      ...bottle,
+      confidence: 0.45,
+      alternatives: [
+        { material: 'vidrio', confidence: 0.2 },
+        { material: 'metal', confidence: 0.3 },
+      ],
+    };
+    const app = createApp({ disposalRepo: fakeDisposalRepo(), aiProvider: fakeAi(resolving(data)) });
+    const res = await request(app).post(URL).send(validBody);
+    expect(res.body.result.lowConfidence).toBe(true);
+    expect(res.body.disposal).toBeNull();
+    expect(res.body.result.alternatives).toEqual([
+      { material: 'metal', confidence: 0.3 },
+      { material: 'vidrio', confidence: 0.2 },
+    ]);
+    expect(classifyResponseSchema.safeParse(res.body).success).toBe(true);
+  });
+
+  it.each([
+    [0.59, true],
+    [0.6, false],
+  ])('con certeza %s marca lowConfidence=%s (umbral 0,60)', async (confidence, low) => {
+    const app = createApp({
+      disposalRepo: fakeDisposalRepo(),
+      aiProvider: fakeAi(resolving({ ...bottle, confidence })),
+    });
+    const res = await request(app).post(URL).send(validBody);
+    expect(res.body.result.lowConfidence).toBe(low);
+  });
+
+  it('quita el material principal y los repetidos de las alternativas', async () => {
+    const data: AiClassifyOutput = {
+      ...bottle,
+      confidence: 0.5,
+      alternatives: [
+        { material: 'plastico', confidence: 0.4 },
+        { material: 'vidrio', confidence: 0.1 },
+      ],
+    };
+    const app = createApp({ disposalRepo: fakeDisposalRepo(), aiProvider: fakeAi(resolving(data)) });
+    const res = await request(app).post(URL).send(validBody);
+    expect(res.body.result.alternatives).toEqual([{ material: 'vidrio', confidence: 0.1 }]);
+  });
+
+  it('con NOT_A_WASTE no consulta reglas ni devuelve datos de escaneo guardado', async () => {
+    const repo = fakeDisposalRepo();
+    const app = createApp({
+      disposalRepo: repo,
+      aiProvider: fakeAi(resolving({ ...bottle, is_waste: false })),
+    });
+    const res = await request(app).post(URL).send(validBody);
+    expect(res.status).toBe(422);
+    expect(res.body).not.toHaveProperty('scanId');
+    expect(res.body).not.toHaveProperty('saved');
+    expect(repo.listAll).not.toHaveBeenCalled();
   });
 });

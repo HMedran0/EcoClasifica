@@ -23,7 +23,10 @@ Sin token, los endpoints de escaneo funcionan pero no guardan nada (`saved: fals
 
 Solicitud: `{ image: <base64 sin prefijo>, mimeType: 'image/jpeg', locale?: 'es-CO', municipalityCode?: '13657' }`
 
-Límites: `image` ≤ 5 592 408 caracteres Base64 (4 MB decodificados), `locale` ≤ 35, `municipalityCode` ≤ 20. Superarlos → 400 `VALIDATION_ERROR` sin llamar a la IA. Aplican también a `/scan/upcycle` (mismo esquema).
+Límites: `image` ≤ 5 592 408 caracteres Base64 (4 MB decodificados), `locale` ≤ 35, `municipalityCode` ≤ 20. Se rechazan sin llamar a la IA. Aplican también a `/scan/upcycle` (mismo esquema).
+
+- Cualquier fallo en `image` (falta, no es texto, muy corta, muy grande, Base64 mal formado o tipo real distinto de `mimeType`) → 400 `INVALID_IMAGE`, aunque fallen también otros campos.
+- Fallos en los demás campos (`mimeType`, `locale`, `municipalityCode`) con una imagen válida → 400 `VALIDATION_ERROR`.
 
 Respuesta 200:
 
@@ -56,6 +59,9 @@ Respuesta 200:
 - Municipio: `municipalityCode` de la solicitud o, si falta, `DEFAULT_MUNICIPALITY_CODE` (`13657`).
 - Resolución: `(material, municipio)` → `(material, 'DEFAULT')` → regla `BLACK` de `DEFAULT` (con advertencia en el log).
 - Si `lowConfidence` es `true`, `disposal` es `null` y el cliente muestra las `alternatives` (HU-07), **salvo** que la regla exija punto limpio (`requiresDropOff: true`, p. ej. `electronico` y `peligroso`): entonces se devuelve igual.
+- `alternatives`: hasta 2 hipótesis con materiales distintos del principal, sin repetidos y ordenadas de mayor a menor certeza (el backend normaliza lo que diga la IA). Puede venir vacío.
+- Con `lowConfidence: true` el cliente muestra «No estoy seguro», las `alternatives` y el botón «Repetir foto» (pantalla de resultado, F2). El umbral es 0,60 (`LOW_CONFIDENCE_THRESHOLD`).
+- Si la foto no contiene un residuo → 422 `NOT_A_WASTE`; no se consultan las reglas y el escaneo **nunca** se guarda en el historial (tampoco con sesión).
 - Las reglas se cachean en memoria 10 min por instancia. Si Supabase falla se usa la caché vencida (y se reintenta al minuto); sin caché, `disposal` es `null` (error en el log) y la clasificación responde 200 igualmente.
 
 ## POST /scan/upcycle
@@ -104,8 +110,8 @@ Forma única: `{ "error": { "code": "...", "message": "...", "requestId": "..." 
 
 | HTTP | `code`              | Cuándo                                         |
 | ---- | ------------------- | ---------------------------------------------- |
-| 400  | `VALIDATION_ERROR`  | El cuerpo no cumple el esquema                 |
-| 400  | `INVALID_IMAGE`     | Base64 inválido o tipo real no permitido       |
+| 400  | `VALIDATION_ERROR`  | El cuerpo no cumple el esquema (salvo `image`) |
+| 400  | `INVALID_IMAGE`     | Falla `image`: falta, tamaño, Base64 o tipo    |
 | 401  | `UNAUTHORIZED`      | Token ausente o inválido en endpoint protegido |
 | 404  | `NOT_FOUND`         | No existe o no es del usuario                  |
 | 413  | `PAYLOAD_TOO_LARGE` | Cuerpo > 6 MB                                  |
@@ -138,7 +144,7 @@ Formato compatible con OpenAI `POST {DEEPSEEK_BASE_URL}/chat/completions` (**con
 }
 ```
 
-Salida esperada de la IA al clasificar: `{ is_waste, object, material, material_detail, confidence, alternatives[≤2] }`. Al hacer upcycle: `{ object_name, difficulty, ideas[3]: { title, description, extra_materials[≤5] } }`. Prompts en `backend/src/services/ai/prompts.ts`.
+Salida esperada de la IA al clasificar: `{ is_waste, object, material, material_detail, confidence, alternatives[≤2] }` (el validador tolera hasta 4 alternativas y el backend deja las 2 mejores). Al hacer upcycle: `{ object_name, difficulty, ideas[3]: { title, description, extra_materials[≤5] } }`. Prompts en `backend/src/services/ai/prompts.ts`.
 
 ## Seguridad transversal
 

@@ -11,7 +11,8 @@ export const aiClassifySchema = z.object({
   material,
   material_detail: z.string().max(80).default(''),
   confidence,
-  alternatives: z.array(z.object({ material, confidence })).max(2).default([]),
+  // El prompt pide ≤ 2; se toleran hasta 4 (p. ej. si repite el principal) y el servicio deja las 2 mejores.
+  alternatives: z.array(z.object({ material, confidence })).max(4).default([]),
 });
 export type AiClassifyOutput = z.infer<typeof aiClassifySchema>;
 
