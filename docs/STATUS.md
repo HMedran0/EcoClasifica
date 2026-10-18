@@ -1,37 +1,38 @@
 # Estado del proyecto
 
-_Actualizado: 2026-10-11 · Reescribir completo en cada `/handoff` (≤ 40 líneas)._
+_Actualizado: 2026-10-18 · Reescribir completo en cada `/handoff` (≤ 40 líneas)._
 
 ## Fase actual
 
-**F0 — Preparar.** Esqueleto del repositorio creado; falta validar la IA con una foto real.
+**F0 — Preparar: criterio de salida cumplido** (rama `chore/F0-spike-ia`). Falta crear Supabase.
 
-## Hecho
+## Hecho en F0
 
-- Documentación de arquitectura y diseño aprobada (stack, API, modelo de datos, historias).
-- Repositorio inicial: monorepo `shared` + `backend`, `CLAUDE.md`, comandos y subagentes de Claude Code.
-- Backend base: `app.ts`, `server.ts`, env con Zod, errores tipificados, `/api/health`, interfaz `AiProvider`, `DeepSeekProvider` y prompts.
-- Migración SQL inicial (`supabase/migrations/0001_init.sql`) y semilla de reglas (`supabase/seed.sql`).
+- Modelo verificado en la doc oficial: `deepseek-flash` acepta imágenes Base64 (`image_url` + data URI), solo en mensajes `user`.
+- Spike real: 12/12 llamadas (3 fotos × classify/upcycle × `detail` low/auto) con JSON válido según `shared`.
+  Classify ≈ 400 tokens de entrada / 90 de salida, ~1,6 s. Upcycle ≈ 380 / 230, ~2,5 s. `response_format` funciona con imágenes.
+- `DEEPSEEK_IMAGE_DETAIL` opcional (low|auto; vacía → no se envía). El spike acepta un 3.er argumento y rutas desde la raíz.
+- Variables de entorno vacías (`KEY=`) cuentan como no definidas.
 
-## Decisiones confirmadas
+## Decisiones de hoy
 
-React + Vite · Supabase · backend en Railway · frontend en Vercel · municipio San Juan Nepomuceno · español · registro con correo verificado o Google (escanear sin cuenta no guarda historial).
+- ADR-13: `thinking: { type: 'disabled' }` en todas las llamadas. Con el razonamiento activo (por defecto) se truncaba upcycle (5/6 fallos con 384).
+- `max_tokens` 384 se mantiene: sobra margen sin razonamiento (salida máx. observada 239).
+- `DEEPSEEK_IMAGE_DETAIL` queda sin definir: low y auto dieron lo mismo a 768 px.
 
-## Riesgos abiertos
+## Problemas abiertos
 
-1. **Modelo de IA:** confirmar en la documentación oficial de DeepSeek el nombre exacto del modelo (`deepseek-flash`), que acepte imágenes en Base64 y el formato del mensaje. Si no, cambiar solo el adaptador `DeepSeekProvider`.
-2. Código DANE de San Juan Nepomuceno (`13657`) por verificar.
-3. Normativa de contenedores del municipio por confirmar antes de fijar la semilla definitiva.
+1. **Upcycle no rechaza no-residuos:** con una pared de ladrillos devolvió ideas. Resolver en HU-09 (validar `is_waste` antes o en el prompt).
+2. **HU-06 requiere Supabase creado** (`0001_init.sql` y `seed.sql` ejecutados); hoy `SUPABASE_URL` está vacía.
+3. HU-04: validar el token con `supabase.auth.getUser(token)`, no con `SUPABASE_JWT_SECRET`.
+4. Código DANE `13657` y normativa de contenedores del municipio por confirmar.
+5. Desarrollo local en `PORT=3001` (el 3000 lo usa otra app del equipo).
 
-## Siguiente acción (F0)
+## Siguiente acción
 
-1. Crear el repositorio en Git y hacer el primer commit (`chore: initial scaffold`).
-2. `npm install`, `cp .env.example .env`, completar `DEEPSEEK_API_KEY`.
-3. Ejecutar `npm run spike:ai -- ./foto.jpg classify` y `... upcycle` con 3–5 fotos reales.
-4. Ajustar `prompts.ts` y el adaptador según el resultado; anotar hallazgos aquí.
-5. Criterio de salida F0: una foto produce JSON válido según los esquemas de `shared`.
+1. `/clear` → `/status` → `/story HU-05` (rama `feat/HU-05-clasificar`).
+2. Antes de HU-06: crear Supabase, ejecutar `0001_init.sql` y `seed.sql`, completar `.env`.
 
 ## Pendiente de crear
 
-- Proyecto Supabase (ejecutar migración y semilla).
 - `frontend/` (fase F2; ver `frontend/README.md`) y añadirlo a `workspaces`.

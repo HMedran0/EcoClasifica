@@ -16,6 +16,8 @@ import {
   chatSystem,
 } from './prompts';
 
+export type ImageDetail = 'low' | 'auto';
+
 export interface DeepSeekConfig {
   apiKey: string;
   baseUrl: string;
@@ -23,10 +25,12 @@ export interface DeepSeekConfig {
   maxTokens: number;
   chatMaxTokens: number;
   timeoutMs: number;
+  imageDetail?: ImageDetail;
 }
 
 type ContentPart =
-  { type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } };
+  | { type: 'text'; text: string }
+  | { type: 'image_url'; image_url: { url: string; detail?: ImageDetail } };
 type ApiMessage = { role: 'system' | 'user' | 'assistant'; content: string | ContentPart[] };
 
 interface CompletionResponse {
@@ -36,8 +40,11 @@ interface CompletionResponse {
 
 /**
  * Adaptador de DeepSeek (formato compatible con OpenAI /chat/completions).
- * FASE F0: confirmar con la documentación oficial el nombre del modelo, que acepte
- * imágenes en Base64 (image_url con data URI) y el formato exacto del mensaje.
+ * Verificado en F0 (api-docs.deepseek.com/guides/vision, 2026-10-11): `deepseek-flash`
+ * acepta imágenes (JPEG/PNG/GIF/WebP) como `image_url` con data URI Base64, solo en
+ * mensajes `user` (en `system`/`assistant` devuelve 400). Cada imagen cuesta ≤ 1024 tokens.
+ * El modo de razonamiento viene activo por defecto y sus tokens consumen `max_tokens`
+ * (truncaba el JSON con 384): se desactiva con `thinking: { type: 'disabled' }`.
  */
 export class DeepSeekProvider implements AiProvider {
   constructor(private readonly cfg: DeepSeekConfig) {}
@@ -71,7 +78,10 @@ export class DeepSeekProvider implements AiProvider {
           { type: 'text', text: user },
           {
             type: 'image_url',
-            image_url: { url: `data:${image.mimeType};base64,${image.base64}` },
+            image_url: {
+              url: `data:${image.mimeType};base64,${image.base64}`,
+              ...(this.cfg.imageDetail ? { detail: this.cfg.imageDetail } : {}),
+            },
           },
         ],
       },
@@ -127,6 +137,7 @@ export class DeepSeekProvider implements AiProvider {
           model: this.cfg.model,
           max_tokens: opts.maxTokens,
           temperature: 0.1,
+          thinking: { type: 'disabled' },
           ...(opts.json ? { response_format: { type: 'json_object' } } : {}),
           messages,
         }),

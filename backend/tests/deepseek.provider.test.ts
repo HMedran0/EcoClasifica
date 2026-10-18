@@ -45,7 +45,19 @@ describe('DeepSeekProvider', () => {
     expect(body.model).toBe('deepseek-flash');
     expect(body.max_tokens).toBe(384);
     expect(body.response_format).toEqual({ type: 'json_object' });
+    expect(body.thinking).toEqual({ type: 'disabled' });
     expect(body.messages[1].content[1].image_url.url).toMatch(/^data:image\/jpeg;base64,/);
+    expect(body.messages[1].content[1].image_url).not.toHaveProperty('detail');
+  });
+
+  it('envía detail en image_url cuando imageDetail está configurado', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(completion(goodClassify));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await new DeepSeekProvider({ ...cfg, imageDetail: 'low' }).classify(image);
+
+    const body = JSON.parse(fetchMock.mock.calls[0]![1].body);
+    expect(body.messages[1].content[1].image_url.detail).toBe('low');
   });
 
   it('reintenta una vez si el JSON es inválido y suma los tokens', async () => {
@@ -88,5 +100,26 @@ describe('DeepSeekProvider', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(completion(odd)));
     const result = await new DeepSeekProvider(cfg).classify(image);
     expect(result.data.material).toBe('otro');
+  });
+
+  it('chat desactiva thinking, no pide JSON y usa chatMaxTokens', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(completion('  1. Corta la botella.  '));
+    vi.stubGlobal('fetch', fetchMock);
+    const idea = {
+      objectName: 'Botella',
+      title: 'Maceta colgante',
+      description: 'Corta la botella y cuélgala.',
+      extraMaterials: ['cuerda'],
+    };
+
+    const result = await new DeepSeekProvider(cfg).chat(idea, [
+      { role: 'user', content: '¿Cómo empiezo?' },
+    ]);
+
+    expect(result.reply).toBe('1. Corta la botella.');
+    const body = JSON.parse(fetchMock.mock.calls[0]![1].body);
+    expect(body.thinking).toEqual({ type: 'disabled' });
+    expect(body).not.toHaveProperty('response_format');
+    expect(body.max_tokens).toBe(512);
   });
 });
