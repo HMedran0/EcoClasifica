@@ -10,6 +10,17 @@
 
   /* Objetivo táctil mínimo (48 px): clases `min-h-tactil` y `min-w-tactil`. */
   --spacing-tactil: 3rem;
+
+  /* Barra de progreso indeterminada (`animate-progreso`). */
+  --animate-progreso: progreso 1.2s ease-in-out infinite;
+  @keyframes progreso {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(300%);
+    }
+  }
 }
 
 @layer base {
