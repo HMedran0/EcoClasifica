@@ -29,5 +29,9 @@ export const LOW_CONFIDENCE_THRESHOLD = 0.6;
 export const MAX_CHAT_MESSAGES = 10;
 /** Tamaño máximo de la imagen (bytes, ya decodificada). */
 export const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
+/** Longitud máxima en Base64 de una imagen de 4 MB (4 caracteres por cada 3 bytes). */
+export const MAX_IMAGE_BASE64_LENGTH = Math.ceil(MAX_IMAGE_BYTES / 3) * 4;
+/** Longitud máxima de una etiqueta de idioma BCP 47 (p. ej. `es-CO`). */
+export const MAX_LOCALE_LENGTH = 35;
 export const UPCYCLE_IDEAS_COUNT = 3;
 export const DEFAULT_MUNICIPALITY = 'DEFAULT';

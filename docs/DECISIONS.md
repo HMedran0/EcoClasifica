@@ -18,3 +18,4 @@ Formato: decisión · motivo. Añadir al final con `/handoff` cuando se decida a
 | ADR-12 | Ramas por historia + `STATUS.md` como memoria entre sesiones                       | Metodología de contexto (`METODOLOGIA-CONTEXTO.md`).                 |
 | ADR-13 | DeepSeek con `thinking: { type: 'disabled' }` en escaneos y chat                   | El razonamiento consume `max_tokens` y truncaba el JSON; más rápido y barato. |
 | ADR-14 | `createApp()` crea el `DeepSeekProvider` de forma perezosa y un rate limiter por instancia | Health y pruebas sin `DEEPSEEK_API_KEY`; cada prueba con su contador. |
+| ADR-15 | `disposal_rules` en caché por instancia (TTL 10 min; ante fallo, caché vencida y reintento al minuto; sin caché → `disposal: null`). Con certeza < 0,60 solo se devuelve `disposal` si `requiresDropOff` | Supabase caído no rompe la clasificación; ante la duda, pilas y electrónicos nunca van al contenedor doméstico. |
