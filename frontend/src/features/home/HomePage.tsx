@@ -1,3 +1,4 @@
+import { Link } from 'react-router';
 import { ServiceStatus } from './ServiceStatus';
 
 export function HomePage() {
@@ -11,6 +12,12 @@ export function HomePage() {
       <p className="max-w-xs text-base text-bosque">
         Clasifica tus residuos con IA y dales una segunda vida.
       </p>
+      <Link
+        to="/camara"
+        className="flex min-h-tactil w-full max-w-xs items-center justify-center rounded-2xl bg-lima px-6 text-lg font-bold text-petroleo"
+      >
+        Escanear residuo
+      </Link>
       <ServiceStatus />
     </main>
   );

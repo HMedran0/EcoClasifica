@@ -7,7 +7,7 @@
 - Estructura: `src/app` (router), `src/api`, `src/features/{home,camera,classify,upcycle,chat,history,favorites,auth}`, `src/styles`, `src/test`.
 - Paleta (tokens en `src/styles/index.css`): `lima` solo acentos y botones grandes, **nunca texto sobre blanco**; `hoja` solo en texto grande (≥ 24 px); `bosque` y `petroleo` para texto normal.
 - Objetivos táctiles ≥ 48 px: `min-h-tactil` / `min-w-tactil`. Tema claro, contraste AA, textos en español.
-- Cámara: `getUserMedia` con cámara trasera; galería si se niega el permiso. Imagen comprimida en `canvas` (768 px, JPEG ~0,7, ≤ 300 KB).
+- Cámara: `getUserMedia` con cámara trasera; galería si se niega el permiso. Imagen comprimida en `canvas` (768 px, JPEG 0,7 → 0,5 hasta ≤ 300 KB) con `features/camera/compressImage.ts`; la foto lista vive en `photoStore` (Zustand).
 - PWA (HU-01): `display: standalone`, precache del app shell y **network-only para `/api/*`**. Nunca cachear escaneos.
 - Pruebas: Vitest 5 + Testing Library + jsdom. Inyecta `fetchFn` en `createApiClient`; no llames al backend real.
 - Los matchers de jest-dom se registran en `src/test/setup.ts` con `expect.extend`: **no** uses `@testing-library/jest-dom/vitest` (cargaría el Vitest 2 del backend).
