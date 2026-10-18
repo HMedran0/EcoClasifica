@@ -43,6 +43,8 @@ interface CompletionResponse {
  * Verificado en F0 (api-docs.deepseek.com/guides/vision, 2026-10-11): `deepseek-flash`
  * acepta imágenes (JPEG/PNG/GIF/WebP) como `image_url` con data URI Base64, solo en
  * mensajes `user` (en `system`/`assistant` devuelve 400). Cada imagen cuesta ≤ 1024 tokens.
+ * El modo de razonamiento viene activo por defecto y sus tokens consumen `max_tokens`
+ * (truncaba el JSON con 384): se desactiva con `thinking: { type: 'disabled' }`.
  */
 export class DeepSeekProvider implements AiProvider {
   constructor(private readonly cfg: DeepSeekConfig) {}
@@ -135,6 +137,7 @@ export class DeepSeekProvider implements AiProvider {
           model: this.cfg.model,
           max_tokens: opts.maxTokens,
           temperature: 0.1,
+          thinking: { type: 'disabled' },
           ...(opts.json ? { response_format: { type: 'json_object' } } : {}),
           messages,
         }),
