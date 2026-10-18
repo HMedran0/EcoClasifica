@@ -4,9 +4,10 @@ _Actualizado: 2026-10-18 · Reescribir completo en cada `/handoff` (≤ 40 líne
 
 ## Fase actual
 
-**F1 — Backend: HU-05, HU-06 y HU-07 hechas.** Pendiente de `/phase-check` y del merge de `feat/HU-07-baja-certeza`.
+**F2 — Frontend: por empezar.** F1 cerrada: `/phase-check` cumplido y HU-07 mergeada en `main` (`aa50515`).
+Orden de F2 (BACKLOG): base → despliegue → HU-02 → HU-17 (pantalla de resultado) → HU-01. HU-03 pasa a F3.
 
-## Hecho en HU-07 (rama `feat/HU-07-baja-certeza`, commit `a2af925`)
+## Hecho en HU-07 (commit `a2af925`, merge `aa50515`)
 
 - `pickAlternatives`: sin material principal ni repetidos (gana la certeza mayor), ordenadas, máx. 2. Contrato `.max(2)`; la IA tolera 4.
 - Prompt de clasificación: alternativas distintas, ordenadas y obligatorias si confidence < 0,6. **Costo: ~24 tokens de entrada más por escaneo.**
@@ -36,7 +37,7 @@ _Actualizado: 2026-10-18 · Reescribir completo en cada `/handoff` (≤ 40 líne
 
 ## Siguiente acción
 
-`/phase-check` de F1 → si cumple, merge `--no-ff` a `main` y push → `/clear` → arrancar F2 (`frontend/`).
+`/clear` → sesión `chore/F2-base`: crear `frontend/` (Vite + React + Tailwind), añadirlo a `workspaces` y a `npm run check`.
 
 ## Pendiente de crear
 

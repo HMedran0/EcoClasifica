@@ -8,7 +8,7 @@ Estados: Pendiente · En curso · Hecha. Prioridad: M = MVP, D = deseable. Cada 
 | ----- | -------------------------------------------------------- | ---- | ---- | --------- |
 | HU-01 | Instalar la app (PWA)                                    | M    | F2   | Pendiente |
 | HU-02 | Capturar una foto                                        | M    | F2   | Pendiente |
-| HU-03 | Elegir el modo de escaneo                                | M    | F2   | Pendiente |
+| HU-03 | Elegir el modo de escaneo (necesita `/scan/upcycle`)     | M    | F3   | Pendiente |
 | HU-04 | Registro e inicio de sesión (correo verificado o Google) | M    | F4   | Pendiente |
 | HU-05 | Identificar el residuo (incluye `NOT_A_WASTE`)           | M    | F1   | Hecha     |
 | HU-06 | Saber dónde depositarlo                                  | M    | F1   | Hecha     |
@@ -22,6 +22,7 @@ Estados: Pendiente · En curso · Hecha. Prioridad: M = MVP, D = deseable. Cada 
 | HU-14 | Eliminar registros                                       | D    | F4   | Pendiente |
 | HU-15 | Ver mis favoritos                                        | M    | F4   | Pendiente |
 | HU-16 | Estadísticas personales                                  | D    | F4   | Pendiente |
+| HU-17 | Pantalla de resultado (UI de HU-05, HU-06 y HU-07)       | M    | F2   | Pendiente |
 
 ## Fases y criterios de salida
 
@@ -32,6 +33,8 @@ Estados: Pendiente · En curso · Hecha. Prioridad: M = MVP, D = deseable. Cada 
 | F2 Frontend | Proyecto Vite, cámara, resultado, PWA instalable, despliegue en Vercel          | Flujo A completo en un Android real                              |
 | F3 Upcycle  | `POST /scan/upcycle`, ideas, chat paso a paso                                   | Flujo B completo con chat                                        |
 | F4 Cuentas  | Auth (correo verificado y Google), historial, favoritos, RLS, pruebas de acceso | Lighthouse ≥ 90 (Performance y PWA) y RLS probado entre usuarios |
+
+Orden de F2: `chore/F2-base` (proyecto Vite + Tailwind, workspace) → despliegue (Vercel + CORS con Railway) → HU-02 → HU-17 → HU-01.
 
 Después del MVP: empaquetado con Capacitor y publicación en Google Play.
 
