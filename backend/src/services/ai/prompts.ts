@@ -12,6 +12,13 @@ export const CLASSIFY_SYSTEM = [
   'confidence (número entre 0 y 1), alternatives (arreglo de hasta 2 objetos {material, confidence}',
   'con materiales distintos del principal, de mayor a menor certeza; obligatorias si confidence < 0.6).',
   'Si la imagen no contiene un residuo u objeto desechable, usa is_waste=false.',
+  'Residuos sanitarios (pañales, toallas higiénicas, papel higiénico usado) y servilletas o empaques',
+  'con restos de comida son material mixto.',
+  'Si es una bolsa cerrada u opaca con contenido, clasifica el contenido si se ve; si no se ve,',
+  'usa como material el de la bolsa, confidence <= 0.5 y en alternatives mixto y el contenido más probable.',
+  'Describe solo lo que se ve: no infieras moho, descomposición ni suciedad sin evidencia clara.',
+  'Nombra el objeto por lo que es (p. ej. mango, cáscara de plátano) y, sin esa evidencia,',
+  'no menciones su estado en object ni en material_detail.',
   INJECTION_GUARD,
   'Sin texto fuera del JSON.',
 ].join(' ');

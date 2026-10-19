@@ -5,7 +5,7 @@ import { api, type RequestOptions, type ScanRequestInput } from '../../api/clien
 import { ApiError, errorMessage, type ApiErrorCode } from '../../api/errors';
 import { usePhotoStore } from '../camera/photoStore';
 import { BinCard } from './BinCard';
-import { formatPercent, MATERIAL_LABELS } from './materialLabels';
+import { capitalizeFirst, formatPercent, MATERIAL_LABELS } from './materialLabels';
 import { toResultView, type ResultView } from './resultView';
 
 type State =
@@ -172,7 +172,7 @@ function ClassifyResult({ data, view }: { data: ClassifyResponse; view: ResultVi
   const detail = materialDetail.trim();
   const showDetail = detail !== '' && detail.toLowerCase() !== label.toLowerCase();
   // La IA puede devolver el objeto vacío: el título nunca queda en blanco.
-  const title = object.trim() || label;
+  const title = capitalizeFirst(object.trim()) || label;
   // Solo hipótesis distintas del material principal (el backend ya lo filtra; aquí se garantiza).
   const otherMaterials = alternatives.filter((alt) => alt.material !== material).slice(0, 2);
   return (

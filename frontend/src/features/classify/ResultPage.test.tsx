@@ -204,6 +204,13 @@ describe('ResultPage', () => {
     expect(screen.queryByRole('heading', { name: 'Botella' })).not.toBeInTheDocument();
   });
 
+  it('pone en mayúscula la primera letra del objeto', async () => {
+    renderPage(vi.fn().mockResolvedValue(response({ object: 'bolsa de plástico' })));
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Bolsa de plástico' }),
+    ).toBeInTheDocument();
+  });
+
   it('sin detalle ni objeto: sin separador colgando y con el material como título', async () => {
     renderPage(vi.fn().mockResolvedValue(response({ object: ' ', materialDetail: '' })));
     expect(await screen.findByRole('heading', { level: 1, name: 'Plástico' })).toBeInTheDocument();

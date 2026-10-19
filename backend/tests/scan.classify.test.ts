@@ -82,7 +82,7 @@ describe('POST /api/v1/scan/classify', () => {
       binName: 'Contenedor blanco (aprovechables)',
       colorHex: '#F5F5F5',
       icon: 'bin-white',
-      instructions: 'Enjuágalo; si está roto, envuélvelo en papel.',
+      instructions: 'Limpio y seco. Si está roto, envuélvelo en papel.',
       requiresDropOff: false,
     });
   });
