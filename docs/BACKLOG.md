@@ -6,7 +6,7 @@ Estados: Pendiente · En curso · Hecha. Prioridad: M = MVP, D = deseable. Cada 
 
 | ID    | Historia                                                 | Prio | Fase | Estado    |
 | ----- | -------------------------------------------------------- | ---- | ---- | --------- |
-| HU-01 | Instalar la app (PWA)                                    | M    | F2   | Pendiente |
+| HU-01 | Instalar la app (PWA)                                    | M    | F2   | Hecha     |
 | HU-02 | Capturar una foto                                        | M    | F2   | Hecha     |
 | HU-03 | Elegir el modo de escaneo (necesita `/scan/upcycle`)     | M    | F3   | Pendiente |
 | HU-04 | Registro e inicio de sesión (correo verificado o Google) | M    | F4   | Pendiente |
@@ -34,7 +34,7 @@ Estados: Pendiente · En curso · Hecha. Prioridad: M = MVP, D = deseable. Cada 
 | F3 Upcycle  | `POST /scan/upcycle`, ideas, chat paso a paso                                   | Flujo B completo con chat                                        |
 | F4 Cuentas  | Auth (correo verificado y Google), historial, favoritos, RLS, pruebas de acceso | Lighthouse ≥ 90 (Performance y PWA) y RLS probado entre usuarios |
 
-Orden de F2: `chore/F2-base` ✅ (proyecto Vite + Tailwind, workspace) → despliegue ✅ (Vercel + CORS con Railway, `chore/F2-despliegue`) → HU-02 ✅ → HU-17 ✅ → `fix/clasificacion-casos-reales` ✅ (prueba en Android real) → HU-01.
+Orden de F2: `chore/F2-base` ✅ (proyecto Vite + Tailwind, workspace) → despliegue ✅ (Vercel + CORS con Railway, `chore/F2-despliegue`) → HU-02 ✅ → HU-17 ✅ → `fix/clasificacion-casos-reales` ✅ (prueba en Android real) → HU-01 ✅.
 
 Después del MVP: empaquetado con Capacitor y publicación en Google Play.
 

@@ -136,14 +136,14 @@ Como usuario, quiero ver cuántos residuos he clasificado por material.
 
 ## RNF — Requerimientos no funcionales
 
-| Código | Requisito                    | Meta                                                                   |
-| ------ | ---------------------------- | ---------------------------------------------------------------------- |
-| RNF-01 | Rendimiento de clasificación | p95 ≤ 8 s de foto a resultado en 4G                                    |
-| RNF-02 | Peso de la imagen enviada    | ≤ 300 KB tras compresión                                               |
-| RNF-03 | Lighthouse PWA               | ≥ 90 en Performance y PWA                                              |
-| RNF-04 | Seguridad                    | API key solo en el servidor; HTTPS; RLS en todas las tablas            |
-| RNF-05 | Límites de uso               | 10 escaneos/min por IP y 60/día por usuario (configurable)             |
-| RNF-06 | Privacidad                   | Imágenes de usuarios autenticados en bucket privado; opción de borrado |
-| RNF-07 | Disponibilidad               | Degradación controlada si DeepSeek falla (error tipificado, sin caída) |
-| RNF-08 | Accesibilidad                | Contraste AA, objetivos táctiles ≥ 48 px, textos en español            |
-| RNF-09 | Observabilidad               | Logs estructurados con `requestId`, latencia y tokens por llamada      |
+| Código | Requisito                    | Meta                                                                                                                   |
+| ------ | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| RNF-01 | Rendimiento de clasificación | p95 ≤ 8 s de foto a resultado en 4G                                                                                    |
+| RNF-02 | Peso de la imagen enviada    | ≤ 300 KB tras compresión                                                                                               |
+| RNF-03 | Lighthouse e instalabilidad  | Lighthouse ≥ 90 en Performance y Accesibilidad; instalable según Chrome DevTools > Application > Manifest, sin errores |
+| RNF-04 | Seguridad                    | API key solo en el servidor; HTTPS; RLS en todas las tablas                                                            |
+| RNF-05 | Límites de uso               | 10 escaneos/min por IP y 60/día por usuario (configurable)                                                             |
+| RNF-06 | Privacidad                   | Imágenes de usuarios autenticados en bucket privado; opción de borrado                                                 |
+| RNF-07 | Disponibilidad               | Degradación controlada si DeepSeek falla (error tipificado, sin caída)                                                 |
+| RNF-08 | Accesibilidad                | Contraste AA, objetivos táctiles ≥ 48 px, textos en español                                                            |
+| RNF-09 | Observabilidad               | Logs estructurados con `requestId`, latencia y tokens por llamada                                                      |
