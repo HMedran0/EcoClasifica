@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
+import { setOnline } from '../../test/network';
 import { HomePage } from './HomePage';
 
 vi.mock('../../api/client', () => ({
@@ -39,5 +40,34 @@ describe('HomePage', () => {
       </MemoryRouter>,
     );
     expect(await screen.findByText('Servicio disponible')).toBeInTheDocument();
+  });
+
+  it('sin conexión deshabilita Escanear residuo e indica que requiere internet', () => {
+    setOnline(false);
+    render(
+      <MemoryRouter>
+        <HomePage />
+      </MemoryRouter>,
+    );
+    const scan = screen.getByRole('button', { name: 'Escanear residuo' });
+    expect(scan).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.queryByRole('link', { name: 'Escanear residuo' })).not.toBeInTheDocument();
+    expect(scan).toHaveAccessibleDescription('Escanear requiere internet');
+    expect(screen.getByText('Escanear requiere internet')).toBeVisible();
+  });
+
+  it('al recuperar la conexión vuelve a enlazar a la cámara', () => {
+    setOnline(false);
+    render(
+      <MemoryRouter>
+        <HomePage />
+      </MemoryRouter>,
+    );
+    setOnline(true);
+    expect(screen.getByRole('link', { name: 'Escanear residuo' })).toHaveAttribute(
+      'href',
+      '/camara',
+    );
+    expect(screen.queryByText('Escanear requiere internet')).not.toBeInTheDocument();
   });
 });

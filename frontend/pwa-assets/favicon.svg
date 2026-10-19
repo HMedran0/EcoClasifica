@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Favicon de 16/32 px: solo la forma principal (la hoja), sin visor, corchetes ni símbolo de
+       reciclaje, que a ese tamaño no se leen. -->
+  <defs>
+    <linearGradient id="fondo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#86C423"/>
+      <stop offset="0.45" stop-color="#42963F"/>
+      <stop offset="0.75" stop-color="#0C5A3B"/>
+      <stop offset="1" stop-color="#03393B"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#fondo)"/>
+  <path transform="translate(256 256) scale(1.25) translate(-281 -275)"
+        d="M424 150 C410 290 344 400 246 400 C172 400 132 346 138 284 C146 206 236 162 424 150 Z" fill="#FFFFFF"/>
+</svg>
