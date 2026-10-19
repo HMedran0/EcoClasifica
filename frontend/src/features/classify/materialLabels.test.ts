@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatPercent } from './materialLabels';
+import { capitalizeFirst, formatPercent } from './materialLabels';
 
 const pct = (n: number) => `${n}${String.fromCharCode(0xa0)}%`;
 
@@ -21,5 +21,16 @@ describe('formatPercent', () => {
     expect(formatPercent(0)).toBe(pct(0));
     expect(formatPercent(0.6)).toBe(pct(60));
     expect(formatPercent(1)).toBe(pct(100));
+  });
+});
+
+describe('capitalizeFirst', () => {
+  it('pone en mayúscula solo la primera letra', () => {
+    expect(capitalizeFirst('ahuyama entera')).toBe('Ahuyama entera');
+  });
+
+  it('respeta tildes y la cadena vacía', () => {
+    expect(capitalizeFirst('árbol')).toBe('Árbol');
+    expect(capitalizeFirst('')).toBe('');
   });
 });

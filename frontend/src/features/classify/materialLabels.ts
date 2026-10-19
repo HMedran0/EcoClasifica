@@ -28,3 +28,8 @@ const FLOAT_EPSILON = 1e-9;
 export function formatPercent(value: number): string {
   return `${Math.floor(value * 100 + FLOAT_EPSILON)}${NO_BREAK_SPACE}%`;
 }
+
+/** «bolsa de plástico» → «Bolsa de plástico». La IA no siempre empieza con mayúscula. */
+export function capitalizeFirst(text: string): string {
+  return text.charAt(0).toLocaleUpperCase('es') + text.slice(1);
+}
