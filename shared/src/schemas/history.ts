@@ -53,6 +53,15 @@ const detailBase = {
   imageUrl: z.string().url().nullable(),
 };
 
+/**
+ * DELETE /api/v1/history (HU-14): borra todo el historial del usuario. `DELETE /history/:id`
+ * responde 204 sin cuerpo. En ambos casos los favoritos se conservan (su `ideaId` pasa a `null`).
+ */
+export const deleteHistoryResponseSchema = z.object({
+  deleted: z.number().int().min(0),
+});
+export type DeleteHistoryResponse = z.infer<typeof deleteHistoryResponseSchema>;
+
 /** GET /api/v1/history/:id: el escaneo guardado, con la misma forma que la respuesta original. */
 export const historyDetailSchema = z.discriminatedUnion('mode', [
   savedScanResultSchema.options[0].extend(detailBase),

@@ -16,6 +16,18 @@ export function setFavorites(entries: Record<string, string | null>): void {
   useFavoritesStore.setState((s) => ({ byIdea: { ...s.byIdea, ...entries } }));
 }
 
+/**
+ * HU-14: al borrar el escaneo, sus ideas dejan de existir. El favorito sigue en el servidor (sin
+ * `ideaId`), así que solo se olvida lo que se sabía de esas ideas; `'all'` olvida todo.
+ */
+export function forgetIdeas(ideaIds: string[] | 'all'): void {
+  if (ideaIds === 'all') return clearFavorites();
+  const gone = new Set(ideaIds);
+  useFavoritesStore.setState((s) => ({
+    byIdea: Object.fromEntries(Object.entries(s.byIdea).filter(([id]) => !gone.has(id))),
+  }));
+}
+
 export function clearFavorites(): void {
   useFavoritesStore.setState({ byIdea: {} });
 }

@@ -59,6 +59,8 @@ export type ScanRecord = z.output<typeof scanRowSchema>;
 export type ListedScan = { ok: true; record: ScanRecord } | { ok: false; id: string };
 
 const rowIdSchema = z.object({ id: z.string() });
+const deletedRowSchema = z.object({ image_path: z.string().nullable() });
+const deletedRowsSchema = z.array(deletedRowSchema.extend({ id: z.string() }));
 
 function toListedScan(row: unknown): ListedScan {
   const parsed = scanRowSchema.safeParse(row);
@@ -81,6 +83,23 @@ export interface ScansRepo {
   findById(userId: string, scanId: string): Promise<ScanRecord | null>;
   /** Firma en lote; `null` en la posición de una ruta que no se pudo firmar. */
   signImageUrls(paths: string[]): Promise<(string | null)[]>;
+  /**
+   * Borra la fila (la base borra en cascada `scan_ideas` y `chat_messages`; `favorites.idea_id`
+   * pasa a `null`). Devuelve la ruta de su imagen, o `null` si no existe o es de otro usuario.
+   */
+  deleteById(userId: string, scanId: string): Promise<{ imagePath: string | null } | null>;
+  /**
+   * Borra todas las filas del usuario, con las mismas cascadas, y devuelve las borradas. Las
+   * rutas salen de esas filas (no de listar la carpeta): un escaneo guardado mientras tanto
+   * conserva su imagen.
+   */
+  deleteAll(userId: string): Promise<DeletedScan[]>;
+  removeImages(paths: string[]): Promise<void>;
+}
+
+export interface DeletedScan {
+  id: string;
+  imagePath: string | null;
 }
 
 export function createSupabaseScansRepo(client: () => SupabaseClient = getSupabase): ScansRepo {
@@ -170,6 +189,36 @@ export function createSupabaseScansRepo(client: () => SupabaseClient = getSupaba
         const item = data[i];
         return item && !item.error && item.signedUrl ? item.signedUrl : null;
       });
+    },
+
+    async deleteById(userId, scanId) {
+      const { data, error } = await client()
+        .from('scans')
+        .delete()
+        .eq('user_id', userId)
+        .eq('id', scanId)
+        .select('image_path')
+        .maybeSingle();
+      if (error) throw new Error(`No se pudo borrar el escaneo: ${error.message}`);
+      return data ? { imagePath: deletedRowSchema.parse(data).image_path } : null;
+    },
+
+    async deleteAll(userId) {
+      const { data, error } = await client()
+        .from('scans')
+        .delete()
+        .eq('user_id', userId)
+        .select('id, image_path');
+      if (error) throw new Error(`No se pudo borrar el historial: ${error.message}`);
+      return deletedRowsSchema
+        .parse(data ?? [])
+        .map((row) => ({ id: row.id, imagePath: row.image_path }));
+    },
+
+    async removeImages(paths) {
+      if (paths.length === 0) return;
+      const { error } = await bucket().remove(paths);
+      if (error) throw new Error(`No se pudieron borrar las imágenes: ${error.message}`);
     },
   };
 }

@@ -18,13 +18,14 @@ type Result = { data?: unknown; error: { message: string } | null };
 function fakeSupabase(results: Partial<Record<string, Result>> = {}) {
   const queries: Call[][] = [];
   const storage: Call[] = [];
+  const take = (key: string): Result => results[key] ?? { data: [], error: null };
 
   function query(table: string) {
     const calls: Call[] = [['from', table]];
     queries.push(calls);
     const key = () => `${table}.${calls[1]?.[0] ?? 'select'}`;
     const builder: Record<string, unknown> = {
-      then: (resolve: (r: Result) => void) => resolve(results[key()] ?? { data: [], error: null }),
+      then: (resolve: (r: Result) => void) => resolve(take(key())),
     };
     for (const method of ['select', 'insert', 'delete', 'eq', 'order', 'range', 'maybeSingle']) {
       builder[method] = (...args: unknown[]) => {
@@ -40,7 +41,7 @@ function fakeSupabase(results: Partial<Record<string, Result>> = {}) {
       (method: string) =>
       async (...args: unknown[]) => {
         storage.push([method, bucket, ...args]);
-        return results[`storage.${method}`] ?? { data: [], error: null };
+        return take(`storage.${method}`);
       };
     return {
       upload: record('upload'),
@@ -236,5 +237,62 @@ describe('createSupabaseScansRepo.signImageUrls', () => {
     const fake = fakeSupabase();
     expect(await createSupabaseScansRepo(fake.client).signImageUrls([])).toEqual([]);
     expect(fake.storage).toHaveLength(0);
+  });
+});
+
+describe('createSupabaseScansRepo: borrado (HU-14)', () => {
+  it('deleteById filtra por usuario e id y devuelve la ruta de la imagen', async () => {
+    const fake = fakeSupabase({
+      'scans.delete': { data: { image_path: `${USER_A}/${SCAN_ID}.jpg` }, error: null },
+    });
+
+    const deleted = await createSupabaseScansRepo(fake.client).deleteById(USER_A, SCAN_ID);
+
+    expect(deleted).toEqual({ imagePath: `${USER_A}/${SCAN_ID}.jpg` });
+    const calls = fake.queries[0]!;
+    expect(calls[1]).toEqual(['delete']);
+    expect(filtersOf(calls)).toEqual([
+      ['eq', 'user_id', USER_A],
+      ['eq', 'id', SCAN_ID],
+    ]);
+  });
+
+  it('deleteById sin fila (ajena o inexistente) devuelve null', async () => {
+    const fake = fakeSupabase({ 'scans.delete': { data: null, error: null } });
+    expect(await createSupabaseScansRepo(fake.client).deleteById(USER_A, SCAN_ID)).toBeNull();
+  });
+
+  it('deleteAll filtra por usuario y devuelve id e imagen de las filas borradas', async () => {
+    const fake = fakeSupabase({
+      'scans.delete': {
+        data: [
+          { id: SCAN_ID, image_path: `${USER_A}/${SCAN_ID}.jpg` },
+          { id: 'otro', image_path: null },
+        ],
+        error: null,
+      },
+    });
+
+    expect(await createSupabaseScansRepo(fake.client).deleteAll(USER_A)).toEqual([
+      { id: SCAN_ID, imagePath: `${USER_A}/${SCAN_ID}.jpg` },
+      { id: 'otro', imagePath: null },
+    ]);
+    const calls = fake.queries[0]!;
+    expect(calls[1]).toEqual(['delete']);
+    expect(filtersOf(calls)).toEqual([['eq', 'user_id', USER_A]]);
+    expect(calls.at(-1)).toEqual(['select', 'id, image_path']);
+  });
+
+  it('deleteAll lanza si la base falla', async () => {
+    const fake = fakeSupabase({ 'scans.delete': { error: { message: 'caída' } } });
+    await expect(createSupabaseScansRepo(fake.client).deleteAll(USER_A)).rejects.toThrow('caída');
+  });
+
+  it('removeImages lanza si Storage falla y no llama sin rutas', async () => {
+    const fake = fakeSupabase({ 'storage.remove': { error: { message: 'caído' } } });
+    const repo = createSupabaseScansRepo(fake.client);
+    await repo.removeImages([]);
+    expect(fake.storage).toHaveLength(0);
+    await expect(repo.removeImages(['a.jpg'])).rejects.toThrow('caído');
   });
 });

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { api, type RequestOptions } from '../../api/client';
 import { ApiError, errorMessage } from '../../api/errors';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { ModeBadge } from '../camera/ModeSwitch';
 import type { ChatLocationState } from '../chat/ChatPage';
 import { toChatIdea } from '../chat/chatIdea';
@@ -12,12 +13,22 @@ import { setFavorites } from '../favorites/favoritesStore';
 import { toResultView } from '../classify/resultView';
 import { PRIMARY, SECONDARY, TITLE } from '../scan/ScanScreen';
 import { UpcycleResultView } from '../upcycle/IdeasPage';
+import { forgetDeleted } from './forgetDeleted';
 import { formatScanDate } from './formatDate';
+import {
+  DELETE_BUTTON,
+  DELETE_WARNING,
+  SCAN_DELETED,
+  type HistoryLocationState,
+} from './deleteCopy';
+import { useConfirmedDelete } from './useConfirmedDelete';
 
 export type HistoryItemRequest = (id: string, opts?: RequestOptions) => Promise<HistoryDetail>;
+export type DeleteItemRequest = (id: string, opts?: RequestOptions) => Promise<void>;
 
 interface HistoryDetailPageProps {
   historyItem?: HistoryItemRequest;
+  deleteItem?: DeleteItemRequest;
   favorites?: FavoritesApi;
 }
 
@@ -29,6 +40,7 @@ type DetailState =
 /** HU-13: un escaneo guardado, mostrado desde su copia (sin volver a llamar a la IA). */
 export function HistoryDetailPage({
   historyItem = api.historyItem,
+  deleteItem = api.deleteHistoryItem,
   favorites = api,
 }: HistoryDetailPageProps) {
   const { id = '' } = useParams();
@@ -79,6 +91,7 @@ export function HistoryDetailPage({
       {state.kind === 'ready' && <SavedScan detail={state.detail} favorites={favorites} />}
 
       <div className="mt-auto flex flex-col gap-3">
+        {state.kind === 'ready' && <DeleteScan detail={state.detail} deleteItem={deleteItem} />}
         {state.kind === 'error' && state.retryable && (
           <button type="button" className={PRIMARY} onClick={() => setAttempt((n) => n + 1)}>
             Reintentar
@@ -90,6 +103,52 @@ export function HistoryDetailPage({
       </div>
     </main>
   );
+}
+
+/** HU-14: «Eliminar escaneo» con confirmación; al terminar vuelve a /historial con un aviso. */
+function DeleteScan({
+  detail,
+  deleteItem,
+}: {
+  detail: HistoryDetail;
+  deleteItem: DeleteItemRequest;
+}) {
+  const navigate = useNavigate();
+  const flow = useConfirmedDelete(
+    // Si ya no existía (otro dispositivo lo borró), el resultado para el usuario es el mismo.
+    () =>
+      deleteItem(detail.id).catch((err: unknown) => {
+        if (!(err instanceof ApiError && err.code === 'NOT_FOUND')) throw err;
+      }),
+    () => {
+      forgetDeleted({ scanId: detail.id, ideaIds: savedIdeaIds(detail) });
+      const state: HistoryLocationState = { notice: SCAN_DELETED };
+      navigate('/historial', { state });
+    },
+  );
+  return (
+    <>
+      <button type="button" className={DELETE_BUTTON} onClick={flow.ask}>
+        Eliminar escaneo
+      </button>
+      {flow.open && (
+        <ConfirmDialog
+          title="¿Eliminar este escaneo?"
+          message={DELETE_WARNING}
+          confirmLabel="Eliminar"
+          onConfirm={flow.confirm}
+          onCancel={flow.cancel}
+          busy={flow.busy}
+          error={flow.error}
+        />
+      )}
+    </>
+  );
+}
+
+function savedIdeaIds(detail: HistoryDetail): string[] {
+  if (detail.mode !== 'upcycle' || !detail.result.canUpcycle) return [];
+  return detail.result.ideas.flatMap((idea) => (idea.ideaId ? [idea.ideaId] : []));
 }
 
 function toErrorState(err: unknown): DetailState {

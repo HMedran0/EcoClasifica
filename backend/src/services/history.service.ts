@@ -1,6 +1,7 @@
 import {
   HISTORY_PAGE_SIZE,
   historyIdSchema,
+  type DeleteHistoryResponse,
   type HistoryDetail,
   type HistoryItem,
   type HistoryListResponse,
@@ -57,13 +58,62 @@ export async function getHistoryItem(
 ): Promise<HistoryDetail> {
   const id = historyIdSchema.safeParse(scanId);
   const row = id.success ? await scans.findById(user.id, id.data) : null;
-  if (!row) throw new AppError('NOT_FOUND', 'No encontramos ese escaneo en tu historial');
+  if (!row) throw notFound();
   const [[imageUrl = null], saved] = await Promise.all([
     signOrNull(scans, [row], log),
     withFavoriteIds(favorites, user.id, row.saved),
   ]);
   return { ...saved, id: row.id, createdAt: row.createdAt, imageUrl };
 }
+
+/** Rutas por llamada al borrar imágenes en Storage. */
+export const IMAGE_DELETE_BATCH = 100;
+
+/**
+ * Borra primero la fila (con sus cascadas) y luego la imagen. Si la imagen no se puede borrar,
+ * el usuario igual ve el escaneo eliminado y queda un `warn` con el id para limpiarla después.
+ */
+export async function deleteHistoryItem(
+  { scans }: HistoryDeps,
+  user: AuthUser,
+  scanId: string,
+  log: Logger,
+): Promise<void> {
+  const id = historyIdSchema.safeParse(scanId);
+  if (!id.success) throw notFound();
+  const deleted = await scans.deleteById(user.id, id.data);
+  if (!deleted) throw notFound();
+  if (!deleted.imagePath) return;
+  try {
+    await scans.removeImages([deleted.imagePath]);
+  } catch {
+    log.warn({ scanId: id.data }, 'Imagen de escaneo borrado pendiente de limpiar');
+  }
+}
+
+/** Borra todas las filas y luego sus imágenes por lotes; un lote fallido no frena a los demás. */
+export async function deleteHistory(
+  { scans }: HistoryDeps,
+  user: AuthUser,
+  log: Logger,
+): Promise<DeleteHistoryResponse> {
+  const deleted = await scans.deleteAll(user.id);
+  const withImage = deleted.filter((row) => row.imagePath !== null);
+  for (let i = 0; i < withImage.length; i += IMAGE_DELETE_BATCH) {
+    const batch = withImage.slice(i, i + IMAGE_DELETE_BATCH);
+    try {
+      await scans.removeImages(batch.map((row) => row.imagePath as string));
+    } catch {
+      log.warn(
+        { scanIds: batch.map((row) => row.id) },
+        'Imágenes de escaneos borrados pendientes de limpiar',
+      );
+    }
+  }
+  return { deleted: deleted.length };
+}
+
+const notFound = () => new AppError('NOT_FOUND', 'No encontramos ese escaneo en tu historial');
 
 /** Marca cada idea guardada con su `favoriteId` (o `null`) para pintar el corazón (HU-12). */
 async function withFavoriteIds(

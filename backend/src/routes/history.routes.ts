@@ -16,6 +16,9 @@ export function createHistoryRoutes(deps: HistoryDeps, auth: AuthMiddlewares) {
     validate(historyQuerySchema, 'query'),
     asyncHandler(controller.list),
   );
+  router.delete('/history', auth.requireAuth, asyncHandler(controller.removeAll));
   router.get('/history/:id', auth.requireAuth, asyncHandler(controller.show));
+  // El id se valida en el servicio: mal formado responde 404, igual que el ajeno.
+  router.delete('/history/:id', auth.requireAuth, asyncHandler(controller.remove));
   return router;
 }

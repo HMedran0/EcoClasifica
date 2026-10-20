@@ -14,6 +14,7 @@ Base: `/api/v1` (salud en `/api/health`). JSON siempre. Auth: `Authorization: Be
 | GET    | `/api/v1/history`               | Sí       | Escaneos del usuario (paginado)         |
 | GET    | `/api/v1/history/:id`           | Sí       | Detalle de un escaneo                   |
 | DELETE | `/api/v1/history/:id`           | Sí       | Elimina escaneo e imagen                |
+| DELETE | `/api/v1/history`               | Sí       | Elimina todo el historial del usuario   |
 | GET    | `/api/v1/favorites`             | Sí       | Ideas favoritas                         |
 | POST   | `/api/v1/favorites`             | Sí       | Guarda una idea (`{ ideaId }`)          |
 | DELETE | `/api/v1/favorites/:id`         | Sí       | Quita una favorita                      |
@@ -185,6 +186,15 @@ Requiere sesión. Respuesta 200 (`historyDetailSchema`): `{ id, createdAt, image
 
 - **Aislamiento:** el backend usa la service role (salta RLS), así que la consulta filtra por `user_id = req.user.id` y por `id`. Un escaneo de otro usuario responde `404 NOT_FOUND` (no 403, para no revelar que existe). Un id mal formado también responde 404, sin consultar la base.
 - **Favoritos (HU-12):** en `mode: 'upcycle'` con ideas, cada idea con `ideaId` trae `favoriteId`: el id del favorito del propio usuario, o `null`. Es el único endpoint que lo incluye.
+
+## DELETE /history/:id y DELETE /history (HU-14)
+
+Requieren sesión. Borrado permanente, filtrado por `user_id = req.user.id`.
+
+- `DELETE /history/:id` → `204` sin cuerpo. Uno de otro usuario, inexistente o con id mal formado → `404 NOT_FOUND` (el mal formado, sin consultar la base).
+- `DELETE /history` → `200` (`deleteHistoryResponseSchema`): `{ "deleted": N }`, con `N` = escaneos borrados (0 si no había).
+- **Orden:** primero la fila de `scans`; la base borra en cascada `scan_ideas` y `chat_messages`, y `favorites.idea_id` pasa a `null` (el favorito conserva su copia). Después se borra la imagen en `scan-images`.
+- **Imagen:** si su borrado falla, la respuesta es la misma y queda un `warn` para limpiarla después: con `scanId` en el borrado individual; con `scanIds` del lote en el borrado total. En ese caso las rutas salen de las filas borradas (`delete … returning id, image_path`), no de listar la carpeta `<user_id>/`: así un escaneo guardado mientras tanto conserva su imagen. Se borran en lotes de 100, y un lote fallido no frena a los demás.
 
 ## Favoritos (HU-12)
 
