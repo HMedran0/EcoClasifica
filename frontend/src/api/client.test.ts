@@ -222,6 +222,39 @@ describe('api.health', () => {
   });
 });
 
+describe('api.history (HU-13)', () => {
+  const ID = '0e7c3b1a-2f4d-4c6e-9a8b-1d2e3f4a5b6c';
+  const page = { items: [], page: 2, pageSize: 20, hasMore: false };
+
+  it('pide la página indicada con GET', async () => {
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(200, page));
+    await expect(client(fetchFn).history(2)).resolves.toEqual(page);
+    const [url, init] = fetchFn.mock.calls[0]!;
+    expect(url).toBe('https://api.test/api/v1/history?page=2');
+    expect(init?.method).toBe('GET');
+  });
+
+  it('pide el detalle por id y valida la respuesta', async () => {
+    const detail = {
+      id: ID,
+      createdAt: '2026-10-20T12:00:00+00:00',
+      imageUrl: null,
+      mode: 'upcycle',
+      result: { canUpcycle: false, objectName: 'Pila', reason: 'Peligroso.' },
+    };
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(200, detail));
+    await expect(client(fetchFn).historyItem(ID)).resolves.toEqual(detail);
+    expect(fetchFn.mock.calls[0]![0]).toBe(`https://api.test/api/v1/history/${ID}`);
+  });
+
+  it('traduce el 404 a NOT_FOUND', async () => {
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(jsonResponse(404, { error: { code: 'NOT_FOUND', message: 'x' } }));
+    expect((await apiErrorOf(client(fetchFn).historyItem(ID))).code).toBe('NOT_FOUND');
+  });
+});
+
 describe('Authorization', () => {
   const headersOf = (fetchFn: ReturnType<typeof vi.fn<typeof fetch>>) =>
     new Headers(fetchFn.mock.calls[0]![1]!.headers);

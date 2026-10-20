@@ -6,3 +6,4 @@ export * from './schemas/chat';
 export * from './schemas/favorites';
 export * from './schemas/health';
 export * from './schemas/me';
+export * from './schemas/history';

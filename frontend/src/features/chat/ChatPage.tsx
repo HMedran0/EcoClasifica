@@ -1,4 +1,10 @@
-import { CHAT_MESSAGE_MAX, type ChatIdea, type ChatMessage } from '@ecoclasifica/shared';
+import {
+  CHAT_MESSAGE_MAX,
+  chatIdeaSchema,
+  type ChatIdea,
+  type ChatMessage,
+} from '@ecoclasifica/shared';
+import { z } from 'zod';
 import { useEffect, useRef, useState, type FormEvent, type RefObject } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router';
 import { api } from '../../api/client';
@@ -14,40 +20,74 @@ export const STARTERS = [
   '¿Es seguro hacerlo con niños?',
 ] as const;
 
-/** Estado de navegación con el que /ideas abre el chat. */
+/** Estado de navegación con el que /ideas (o el detalle del historial) abre el chat. */
 export interface ChatLocationState {
   ideaIndex: number;
+  /** HU-13: idea de un escaneo guardado; no depende de la foto actual. */
+  saved?: { scanId: string; idea: ChatIdea };
 }
+
+const savedIdeaSchema = z.object({
+  ideaIndex: z.number().int(),
+  saved: z.object({ scanId: z.string().uuid(), idea: chatIdeaSchema }),
+});
 
 interface ChatPageProps {
   chat?: ChatRequest;
 }
 
-/** HU-10 y HU-11: chat paso a paso sobre la idea elegida en /ideas. */
+/** HU-10 y HU-11: chat paso a paso sobre la idea elegida en /ideas o en el historial. */
 export function ChatPage({ chat = api.chat }: ChatPageProps) {
   const context = useIdeaContext();
   if (!context) return <Navigate to="/camara" replace />;
   // `key`: otra idea es otro hilo y otro estado.
-  return <ChatView key={context.ideaIndex} {...context} request={chat} />;
+  return <ChatView key={context.threadKey} {...context} request={chat} />;
 }
 
 interface IdeaContext {
   ideaIndex: number;
   idea: ChatIdea;
   scanId: string | null;
+  /** Clave del hilo en `photoStore`: los del historial no se mezclan con los de la foto actual. */
+  threadKey: string;
+  back: { to: string; label: string };
 }
 
-/** La idea sale de la respuesta de upcycle de la foto actual; sin ella no hay chat. */
+/**
+ * La idea sale del escaneo guardado que abrió el chat (historial) o de la respuesta de upcycle
+ * de la foto actual; sin ninguna de las dos no hay chat.
+ */
 function useIdeaContext(): IdeaContext | null {
   const { state } = useLocation();
   const photo = usePhotoStore((s) => s.photo);
   const upcycle = usePhotoStore((s) => s.results.upcycle);
+  const saved = savedIdeaSchema.safeParse(state);
+  if (saved.success) {
+    const {
+      ideaIndex,
+      saved: { scanId, idea },
+    } = saved.data;
+    return {
+      ideaIndex,
+      idea,
+      scanId,
+      threadKey: `historial:${scanId}:${ideaIndex}`,
+      back: { to: `/historial/${scanId}`, label: 'Volver al escaneo' },
+    };
+  }
   const ideaIndex = readIdeaIndex(state);
   if (!photo || ideaIndex === null || upcycle?.photoId !== photo.id) return null;
   const { result, scanId } = upcycle.data;
   if (!result.canUpcycle) return null;
   const idea = result.ideas.find((i) => i.ideaIndex === ideaIndex);
-  return idea ? { ideaIndex, idea: toChatIdea(result.objectName, idea), scanId } : null;
+  if (!idea) return null;
+  return {
+    ideaIndex,
+    idea: toChatIdea(result.objectName, idea),
+    scanId,
+    threadKey: String(ideaIndex),
+    back: { to: '/ideas', label: 'Volver a las ideas' },
+  };
 }
 
 function readIdeaIndex(state: unknown): number | null {
@@ -56,7 +96,7 @@ function readIdeaIndex(state: unknown): number | null {
   return typeof ideaIndex === 'number' ? ideaIndex : null;
 }
 
-function ChatView({ request, ...context }: IdeaContext & { request: ChatRequest }) {
+function ChatView({ request, back, ...context }: IdeaContext & { request: ChatRequest }) {
   const navigate = useNavigate();
   const { messages, status, lastReply, send, retry } = useChat({ ...context, request });
   const [draft, setDraft] = useState('');
@@ -112,8 +152,8 @@ function ChatView({ request, ...context }: IdeaContext & { request: ChatRequest 
         <button type="submit" className={PRIMARY} disabled={sending || !draft.trim()}>
           Enviar
         </button>
-        <button type="button" className={SECONDARY} onClick={() => navigate('/ideas')}>
-          Volver a las ideas
+        <button type="button" className={SECONDARY} onClick={() => navigate(back.to)}>
+          {back.label}
         </button>
       </form>
     </main>

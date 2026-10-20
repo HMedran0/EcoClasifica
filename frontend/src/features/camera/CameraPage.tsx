@@ -6,6 +6,7 @@ import {
   PhotoError,
   type CompressedPhoto,
 } from './compressImage';
+import { useAuthStore } from '../auth/authStore';
 import { ModeSwitch } from './ModeSwitch';
 import { usePhotoStore } from './photoStore';
 import { useScanModeStore } from './scanModeStore';
@@ -43,6 +44,8 @@ export function CameraPage({
   const setPhoto = usePhotoStore((s) => s.setPhoto);
   const clearPhoto = usePhotoStore((s) => s.clear);
   const mode = useScanModeStore((s) => s.mode);
+  // HU-13: con sesión el escaneo se guarda; se avisa antes de enviar la foto.
+  const signedIn = useAuthStore((s) => s.session !== null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Si el usuario sale mientras se comprime, la foto no debe quedar en el store.
@@ -97,6 +100,7 @@ export function CameraPage({
 
       {/* Visible con cámara y con vista previa: el modo se puede cambiar antes de usar la foto. */}
       <ModeSwitch />
+      {signedIn && <p className="text-sm text-bosque">Se guardará en tu historial</p>}
 
       {/* Siempre montado: `useCamera` necesita el elemento para conectar el flujo al reabrir. */}
       <video

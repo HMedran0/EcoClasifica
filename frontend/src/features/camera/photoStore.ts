@@ -14,8 +14,11 @@ export interface ScanResponses {
 /** Última respuesta de cada modo y la foto a la que corresponde (evita repetir la llamada a la IA). */
 export type ScanResults = { [M in ScanMode]?: { photoId: number; data: ScanResponses[M] } };
 
-/** Hilos del chat de la foto actual, por `ideaIndex` de su última respuesta de upcycle. */
-export type ChatThreads = Partial<Record<number, ChatMessage[]>>;
+/**
+ * Hilos del chat en memoria. Los de la foto actual van por `ideaIndex` de su última respuesta de
+ * upcycle; los de ideas del historial, por `historial:<scanId>:<ideaIndex>` (HU-13).
+ */
+export type ChatThreads = Partial<Record<string, ChatMessage[]>>;
 
 interface PhotoState {
   photo: StoredPhoto | null;
@@ -24,7 +27,7 @@ interface PhotoState {
   setPhoto: (photo: CompressedPhoto) => void;
   clear: () => void;
   saveResult: <M extends ScanMode>(mode: M, photoId: number, data: ScanResponses[M]) => void;
-  saveChat: (ideaIndex: number, messages: ChatMessage[]) => void;
+  saveChat: (threadKey: string, messages: ChatMessage[]) => void;
 }
 
 let nextPhotoId = 1;
@@ -47,11 +50,16 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
   saveResult: (mode, photoId, data) =>
     set((state) => ({
       results: { ...state.results, [mode]: { photoId, data } },
-      ...(mode === 'upcycle' ? { chats: {} } : {}),
+      ...(mode === 'upcycle' ? { chats: historyThreads(state.chats) } : {}),
     })),
-  saveChat: (ideaIndex, messages) =>
-    set((state) => ({ chats: { ...state.chats, [ideaIndex]: messages } })),
+  saveChat: (threadKey, messages) =>
+    set((state) => ({ chats: { ...state.chats, [threadKey]: messages } })),
 }));
+
+/** Los hilos de ideas del historial no dependen de la foto actual: sobreviven a ideas nuevas. */
+function historyThreads(chats: ChatThreads): ChatThreads {
+  return Object.fromEntries(Object.entries(chats).filter(([key]) => key.startsWith('historial:')));
+}
 
 function revoke(photo: StoredPhoto | null): void {
   if (photo) URL.revokeObjectURL(photo.previewUrl);

@@ -5,6 +5,10 @@ import {
   type chatRequestSchema,
   errorBodySchema,
   healthResponseSchema,
+  historyDetailSchema,
+  historyListResponseSchema,
+  type HistoryDetail,
+  type HistoryListResponse,
   type ClassifyResponse,
   type HealthResponse,
   type scanRequestSchema,
@@ -104,6 +108,16 @@ export function createApiClient({
       request('/api/v1/scan/upcycle', { method: 'POST', body: req }, upcycleResponseSchema, opts),
     chat: (req: ChatRequestInput, opts?: RequestOptions): Promise<ChatResponse> =>
       request('/api/v1/chat', { method: 'POST', body: req }, chatResponseSchema, opts),
+    /** HU-13: una página del historial (requiere sesión). */
+    history: (page: number, opts?: RequestOptions): Promise<HistoryListResponse> =>
+      request(`/api/v1/history?page=${page}`, { method: 'GET' }, historyListResponseSchema, opts),
+    historyItem: (id: string, opts?: RequestOptions): Promise<HistoryDetail> =>
+      request(
+        `/api/v1/history/${encodeURIComponent(id)}`,
+        { method: 'GET' },
+        historyDetailSchema,
+        opts,
+      ),
     /** Indicador de conexión de la pantalla inicial (prueba de humo de CORS en producción). */
     health: (opts?: RequestOptions): Promise<HealthResponse> =>
       request('/api/health', { method: 'GET' }, healthResponseSchema, opts),

@@ -1,8 +1,11 @@
 import { BrowserRouter, Route, Routes } from 'react-router';
 import { CameraPage } from '../features/camera/CameraPage';
 import { LoginPage } from '../features/auth/LoginPage';
+import { RequireAuth } from '../features/auth/RequireAuth';
 import { ChatPage } from '../features/chat/ChatPage';
 import { ResultPage } from '../features/classify/ResultPage';
+import { HistoryDetailPage } from '../features/history/HistoryDetailPage';
+import { HistoryPage } from '../features/history/HistoryPage';
 import { HomePage } from '../features/home/HomePage';
 import { IdeasPage } from '../features/upcycle/IdeasPage';
 import { OfflineBanner } from '../pwa/OfflineBanner';
@@ -19,7 +22,23 @@ export function App() {
         <Route path="/ideas" element={<IdeasPage />} />
         <Route path="/chat" element={<ChatPage />} />
         <Route path="/entrar" element={<LoginPage />} />
-        {/* HU-13 y HU-15: <Route path="/historial" element={<RequireAuth>…</RequireAuth>} /> */}
+        <Route
+          path="/historial"
+          element={
+            <RequireAuth>
+              <HistoryPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/historial/:id"
+          element={
+            <RequireAuth>
+              <HistoryDetailPage />
+            </RequireAuth>
+          }
+        />
+        {/* HU-15: <Route path="/favoritos" element={<RequireAuth>…</RequireAuth>} /> */}
       </Routes>
       <UpdatePrompt />
     </BrowserRouter>

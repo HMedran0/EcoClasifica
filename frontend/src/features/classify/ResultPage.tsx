@@ -54,7 +54,8 @@ function isUnsure(view: ResultView): boolean {
   return view.kind === 'unsure' || (view.kind === 'dropOff' && view.unsure);
 }
 
-function ClassifyResult({ data, view }: { data: ClassifyResponse; view: ResultView }) {
+/** Vista del resultado; también la usa el detalle del historial (HU-13). */
+export function ClassifyResult({ data, view }: { data: ClassifyResponse; view: ResultView }) {
   const { object, material, materialDetail, confidence, alternatives } = data.result;
   const label = MATERIAL_LABELS[material];
   const detail = materialDetail.trim();

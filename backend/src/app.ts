@@ -13,6 +13,7 @@ import {
   type DisposalRulesRepo,
 } from './repositories/disposalRules.repo';
 import { createSupabaseProfilesRepo, type ProfilesRepo } from './repositories/profiles.repo';
+import { createSupabaseScansRepo, type ScansRepo } from './repositories/scans.repo';
 import { createV1Routes, routes } from './routes';
 import { lazyAiProvider, type AiProvider } from './services/ai';
 import { createSupabaseTokenVerifier, type TokenVerifier } from './services/auth.service';
@@ -28,6 +29,8 @@ export interface AppDeps {
   tokenVerifier?: TokenVerifier;
   /** Perfiles inyectables (en memoria en pruebas). */
   profilesRepo?: ProfilesRepo;
+  /** Historial de escaneos inyectable (en memoria en pruebas). */
+  scansRepo?: ScansRepo;
   /** Logger de peticiones inyectable (las pruebas capturan su salida). */
   logger?: Logger;
 }
@@ -38,6 +41,7 @@ export function createApp(deps: AppDeps = {}) {
   const disposal = createDisposalResolver(deps.disposalRepo ?? createSupabaseDisposalRulesRepo());
   const auth = createAuthMiddlewares(deps.tokenVerifier ?? createSupabaseTokenVerifier());
   const profiles = deps.profilesRepo ?? createSupabaseProfilesRepo();
+  const scans = deps.scansRepo ?? createSupabaseScansRepo();
   const app = express();
 
   // Detrás del proxy de Railway: necesario para ver la IP real en el rate limiting.
@@ -62,7 +66,7 @@ export function createApp(deps: AppDeps = {}) {
   app.use(express.json({ limit: '6mb' }));
 
   app.use('/api', routes);
-  app.use('/api/v1', createV1Routes({ ai: aiProvider, disposal, profiles }, auth));
+  app.use('/api/v1', createV1Routes({ ai: aiProvider, disposal, profiles, scans }, auth));
 
   app.use(notFound);
   app.use(errorHandler);

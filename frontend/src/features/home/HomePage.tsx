@@ -1,5 +1,6 @@
 import { Link } from 'react-router';
 import { AccountStatus } from '../auth/AccountStatus';
+import { useAuthStore } from '../auth/authStore';
 import { InstallButton } from '../../pwa/InstallButton';
 import { useOnlineStatus } from '../../pwa/useOnlineStatus';
 import { ServiceStatus } from './ServiceStatus';
@@ -9,6 +10,7 @@ const SCAN_BUTTON =
 
 export function HomePage() {
   const online = useOnlineStatus();
+  const signedIn = useAuthStore((s) => s.session !== null);
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center gap-6 px-6 text-center">
       <img src="/brand/logo.svg" alt="" width={160} height={160} className="size-40" />
@@ -38,6 +40,14 @@ export function HomePage() {
             Escanear requiere internet
           </p>
         </div>
+      )}
+      {signedIn && (
+        <Link
+          to="/historial"
+          className={`${SCAN_BUTTON} border-2 border-bosque text-base font-semibold text-bosque`}
+        >
+          Mi historial
+        </Link>
       )}
       <AccountStatus />
       <InstallButton />

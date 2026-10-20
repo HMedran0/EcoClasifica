@@ -20,6 +20,7 @@ ai_usage   → profiles, scans         (solo lo usa el backend)
 - **Tres ideas fijas:** `UNIQUE (scan_id, idea_index)` e `idea_index` entre 0 y 2.
 - **Reglas en datos:** `disposal_rules` permite regla `DEFAULT` y reglas por municipio sin redesplegar.
 - **Solo usuarios autenticados guardan:** los escaneos anónimos no llegan a `scans`.
+- **Copia del resultado (`0003_scans_result.sql`):** `scans.result` (jsonb, `not null`, `check` de objeto) guarda lo que vio el usuario. El detalle del historial se arma desde ahí, sin la IA y sin depender de las reglas vigentes. Las columnas sueltas (`object_name`, `material_code`, …) se conservan para filtros (HU-16).
 - **Chat ligado a la idea:** `chat_messages` se borra con la idea.
 
 ## Reglas de disposición (semilla)

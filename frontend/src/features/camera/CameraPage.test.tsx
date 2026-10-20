@@ -1,6 +1,8 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { fakeSession } from '../../test/supabaseMock';
+import { useAuthStore } from '../auth/authStore';
 import { CameraPage } from './CameraPage';
 import { PhotoError, type CompressedPhoto } from './compressImage';
 import { usePhotoStore } from './photoStore';
@@ -59,6 +61,7 @@ beforeEach(() => {
   URL.revokeObjectURL = vi.fn();
   usePhotoStore.setState({ photo: null, results: {} });
   useScanModeStore.setState({ mode: 'classify' });
+  useAuthStore.setState({ session: null, ready: true });
   stopTrack.mockClear();
 });
 
@@ -67,6 +70,16 @@ afterEach(() => {
 });
 
 describe('CameraPage', () => {
+  it('con sesión avisa que el escaneo se guardará en el historial', async () => {
+    mockGetUserMedia(() => Promise.resolve(fakeStream()));
+    renderPage();
+    await screen.findByRole('button', { name: 'Tomar foto' });
+    expect(screen.queryByText('Se guardará en tu historial')).not.toBeInTheDocument();
+
+    act(() => useAuthStore.setState({ session: fakeSession(), ready: true }));
+    expect(screen.getByText('Se guardará en tu historial')).toBeInTheDocument();
+  });
+
   it('con permiso concedido pide la cámara trasera y muestra la vista previa', async () => {
     const getUserMedia = mockGetUserMedia(() => Promise.resolve(fakeStream()));
     renderPage();
