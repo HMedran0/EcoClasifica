@@ -37,7 +37,7 @@ Estados: Pendiente · En curso · Hecha. Prioridad: M = MVP, D = deseable. Cada 
 
 Orden de F2: `chore/F2-base` ✅ (proyecto Vite + Tailwind, workspace) → despliegue ✅ (Vercel + CORS con Railway, `chore/F2-despliegue`) → HU-02 ✅ → HU-17 ✅ → `fix/clasificacion-casos-reales` ✅ (prueba en Android real) → HU-01 ✅. **Criterio de salida cumplido (2026-10-19):** Flujo A completo en Android real (7 objetos, 2–3 s, instalación, modo avión, TalkBack, CI verde).
 
-Orden de F3: HU-09 (`POST /scan/upcycle` e ideas) → HU-03 (interruptor de modo) → HU-10 → HU-11 → mejora HU-18.
+Orden de F3: HU-09 (`POST /scan/upcycle` e ideas) ✅ → HU-03 (interruptor de modo) ✅ → HU-10 ✅ → HU-11 ✅ → mejora HU-18 ✅. **Criterio de salida cumplido (2026-10-19):** Flujo B completo con chat en Android real (frasco y botella con 3 ideas, cargador sin ideas → «Ver dónde depositarlo», idea → chat en pasos con hilo conservado), botón «Instalar app» verificado en escritorio, CI verde.
 
 Después del MVP: empaquetado con Capacitor y publicación en Google Play.
 
