@@ -54,6 +54,7 @@ const unsure = {
 };
 
 const storedPhoto = {
+  id: 1,
   base64: 'a'.repeat(200),
   mimeType: 'image/jpeg' as const,
   width: 768,
@@ -79,7 +80,7 @@ const liveRegion = () => document.querySelector('[aria-live="polite"]') as HTMLE
 
 beforeEach(() => {
   URL.revokeObjectURL = vi.fn();
-  usePhotoStore.setState({ photo: storedPhoto });
+  usePhotoStore.setState({ photo: storedPhoto, results: {} });
 });
 
 describe('ResultPage', () => {
@@ -90,6 +91,7 @@ describe('ResultPage', () => {
 
     const live = within(liveRegion());
     expect(screen.getByAltText('Tu foto')).toHaveAttribute('src', 'blob:preview');
+    expect(screen.getByText('Modo Clasificar')).toBeInTheDocument();
     expect(live.getByText('Plástico')).toBeInTheDocument();
     expect(live.getByText(/· PET/)).toBeInTheDocument();
     expect(live.getByText('Certeza: 93 %')).toBeInTheDocument();
@@ -198,7 +200,9 @@ describe('ResultPage', () => {
       .mockRejectedValueOnce(new ApiError('AI_TIMEOUT', 504));
     renderPage(classify);
     // Una foto nueva relanza el efecto y cancela la primera petición.
-    act(() => usePhotoStore.setState({ photo: { ...storedPhoto, base64: 'b'.repeat(200) } }));
+    act(() =>
+      usePhotoStore.setState({ photo: { ...storedPhoto, id: 2, base64: 'b'.repeat(200) } }),
+    );
     expect(await screen.findByRole('alert')).toHaveTextContent('El análisis tardó demasiado');
     await act(async () => lateResolve(response()));
     expect(screen.queryByRole('heading', { name: 'Botella' })).not.toBeInTheDocument();
@@ -231,6 +235,54 @@ describe('ResultPage', () => {
     renderPage(vi.fn().mockRejectedValue(new ApiError('AI_TIMEOUT', 504)));
     const title = await screen.findByRole('heading', { name: 'No pudimos analizar la foto' });
     expect(title).toHaveFocus();
+  });
+
+  it('reutiliza la respuesta guardada de la misma foto y Reintentar pide otra', async () => {
+    const classify = vi.fn().mockResolvedValue(response());
+    const first = renderPage(classify);
+    await screen.findByRole('heading', { name: 'Botella' });
+    first.unmount();
+
+    renderPage(classify);
+    expect(screen.getByRole('heading', { name: 'Botella' })).toBeInTheDocument();
+    expect(classify).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Escanear otro residuo' }));
+    expect(usePhotoStore.getState().results).toEqual({});
+  });
+
+  it('Reintentar ignora la respuesta guardada y llama de nuevo', async () => {
+    usePhotoStore.setState({ results: { classify: { photoId: 1, data: response({}, null) } } });
+    const classify = vi.fn().mockResolvedValue(response());
+    renderPage(classify);
+    expect(screen.getByText(/No pudimos obtener dónde depositarlo/)).toBeInTheDocument();
+    expect(classify).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
+    expect(await screen.findByRole('heading', { name: whiteBin.binName })).toBeInTheDocument();
+    expect(classify).toHaveBeenCalledTimes(1);
+    expect(usePhotoStore.getState().results.classify?.data).toEqual(response());
+  });
+
+  it('tras Reintentar, otro cambio de dependencias usa la respuesta guardada', async () => {
+    const classify = vi
+      .fn()
+      .mockResolvedValueOnce(response({}, null))
+      .mockResolvedValueOnce(response());
+    const { rerender } = renderPage(classify);
+    fireEvent.click(await screen.findByRole('button', { name: 'Reintentar' }));
+    await screen.findByRole('heading', { name: whiteBin.binName });
+
+    const other = vi.fn().mockResolvedValue(response());
+    rerender(
+      <MemoryRouter initialEntries={['/resultado']}>
+        <Routes>
+          <Route path="/resultado" element={<ResultPage classify={other} />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    expect(other).not.toHaveBeenCalled();
+    expect(classify).toHaveBeenCalledTimes(2);
   });
 
   it('sin foto en el store redirige a la cámara sin llamar a la API', () => {

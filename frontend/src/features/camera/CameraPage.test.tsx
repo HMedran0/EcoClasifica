@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CameraPage } from './CameraPage';
 import { PhotoError, type CompressedPhoto } from './compressImage';
 import { usePhotoStore } from './photoStore';
+import { useScanModeStore } from './scanModeStore';
 import { CAMERA_CONSTRAINTS } from './useCamera';
 
 const fakePhoto: CompressedPhoto = {
@@ -16,6 +17,7 @@ const fakePhoto: CompressedPhoto = {
 };
 
 const fakePhotoStored = {
+  id: 1,
   base64: fakePhoto.base64,
   mimeType: fakePhoto.mimeType,
   width: fakePhoto.width,
@@ -46,6 +48,7 @@ function renderPage(props: Parameters<typeof CameraPage>[0] = {}) {
       <Routes>
         <Route path="/camara" element={<CameraPage {...props} />} />
         <Route path="/resultado" element={<p>Pantalla de resultado</p>} />
+        <Route path="/ideas" element={<p>Pantalla de ideas</p>} />
       </Routes>
     </MemoryRouter>,
   );
@@ -54,7 +57,8 @@ function renderPage(props: Parameters<typeof CameraPage>[0] = {}) {
 beforeEach(() => {
   URL.createObjectURL = vi.fn(() => 'blob:preview');
   URL.revokeObjectURL = vi.fn();
-  usePhotoStore.setState({ photo: null });
+  usePhotoStore.setState({ photo: null, results: {} });
+  useScanModeStore.setState({ mode: 'classify' });
   stopTrack.mockClear();
 });
 
@@ -177,5 +181,66 @@ describe('CameraPage', () => {
       });
     });
     expect(screen.getByText('No pudimos abrir esa imagen.')).toBeInTheDocument();
+  });
+
+  describe('modo de escaneo (HU-03)', () => {
+    const modeRadio = (name: string) => screen.getByRole('radio', { name });
+
+    async function choosePhoto() {
+      fireEvent.change(screen.getByLabelText('Elegir de la galería'), {
+        target: { files: [new File(['img'], 'residuo.jpg', { type: 'image/jpeg' })] },
+      });
+      return screen.findByRole('button', { name: 'Usar foto' });
+    }
+
+    it('Clasificar está activo por defecto en un grupo accesible', () => {
+      expect(useScanModeStore.getInitialState().mode).toBe('classify');
+      mockGetUserMedia(() => Promise.reject(new DOMException('', 'NotAllowedError')));
+      renderPage();
+      expect(screen.getByRole('group', { name: 'Modo de escaneo' })).toBeInTheDocument();
+      expect(modeRadio('Clasificar')).toBeChecked();
+      expect(modeRadio('Dar segunda vida')).not.toBeChecked();
+    });
+
+    it('el interruptor cambia el modo y lo anuncia como marcado', () => {
+      mockGetUserMedia(() => Promise.reject(new DOMException('', 'NotAllowedError')));
+      renderPage();
+      fireEvent.click(modeRadio('Dar segunda vida'));
+      expect(modeRadio('Dar segunda vida')).toBeChecked();
+      expect(modeRadio('Clasificar')).not.toBeChecked();
+      expect(useScanModeStore.getState().mode).toBe('upcycle');
+    });
+
+    it('conserva la última elección durante la sesión', () => {
+      mockGetUserMedia(() => Promise.reject(new DOMException('', 'NotAllowedError')));
+      const first = renderPage();
+      fireEvent.click(modeRadio('Dar segunda vida'));
+      first.unmount();
+
+      renderPage();
+      expect(modeRadio('Dar segunda vida')).toBeChecked();
+    });
+
+    it('el modo sigue visible en la vista previa y Dar segunda vida lleva a /ideas', async () => {
+      mockGetUserMedia(() => Promise.reject(new DOMException('', 'NotAllowedError')));
+      renderPage({ compressFile: vi.fn().mockResolvedValue(fakePhoto) });
+      fireEvent.click(modeRadio('Dar segunda vida'));
+      const usePhoto = await choosePhoto();
+
+      expect(screen.getByAltText('Foto tomada')).toBeInTheDocument();
+      expect(modeRadio('Dar segunda vida')).toBeChecked();
+      fireEvent.click(usePhoto);
+      expect(screen.getByText('Pantalla de ideas')).toBeInTheDocument();
+    });
+
+    it('en la vista previa aún se puede volver a Clasificar', async () => {
+      mockGetUserMedia(() => Promise.reject(new DOMException('', 'NotAllowedError')));
+      useScanModeStore.setState({ mode: 'upcycle' });
+      renderPage({ compressFile: vi.fn().mockResolvedValue(fakePhoto) });
+      const usePhoto = await choosePhoto();
+      fireEvent.click(modeRadio('Clasificar'));
+      fireEvent.click(usePhoto);
+      expect(screen.getByText('Pantalla de resultado')).toBeInTheDocument();
+    });
   });
 });

@@ -1,4 +1,9 @@
-import { ERROR_STATUS, type ClassifyResponse, type ErrorCode } from '@ecoclasifica/shared';
+import {
+  ERROR_STATUS,
+  type ClassifyResponse,
+  type ErrorCode,
+  type UpcycleResponse,
+} from '@ecoclasifica/shared';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createApiClient, REQUEST_TIMEOUT_MS } from './client';
 import { ApiError, errorMessage } from './errors';
@@ -143,6 +148,53 @@ describe('api.classify', () => {
     const pending = client(hangingFetch).classify(body, { signal: controller.signal });
     controller.abort();
     expect((await apiErrorOf(pending)).code).toBe('ABORTED');
+  });
+});
+
+describe('api.upcycle', () => {
+  const ideas: UpcycleResponse = {
+    scanId: null,
+    mode: 'upcycle',
+    result: {
+      canUpcycle: true,
+      objectName: 'Frasco de vidrio',
+      difficulty: 'Fácil',
+      ideas: [0, 1, 2].map((ideaIndex) => ({
+        ideaIndex,
+        title: `Idea ${ideaIndex}`,
+        description: 'Descripción',
+        extraMaterials: [],
+      })),
+    },
+    saved: false,
+  };
+
+  it('envía POST JSON a /api/v1/scan/upcycle y devuelve la respuesta validada', async () => {
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(200, ideas));
+    await expect(client(fetchFn).upcycle(body)).resolves.toEqual(ideas);
+    const [url, init] = fetchFn.mock.calls[0]!;
+    expect(url).toBe('https://api.test/api/v1/scan/upcycle');
+    expect(init).toMatchObject({ method: 'POST', body: JSON.stringify(body) });
+  });
+
+  it('rechaza con UNEXPECTED_RESPONSE si llega una respuesta de classify', async () => {
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(200, ok));
+    expect((await apiErrorOf(client(fetchFn).upcycle(body))).code).toBe('UNEXPECTED_RESPONSE');
+  });
+
+  it('traduce NOT_A_WASTE al mismo mensaje en español', async () => {
+    const error = { error: { code: 'NOT_A_WASTE', message: 'x', requestId: 'r1' } };
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(422, error));
+    const err = await apiErrorOf(client(fetchFn).upcycle(body));
+    expect(err).toMatchObject({ code: 'NOT_A_WASTE', status: 422, requestId: 'r1' });
+    expect(err.message).toBe(errorMessage('NOT_A_WASTE'));
+  });
+
+  it('aborta y rechaza con REQUEST_TIMEOUT con el mismo plazo', async () => {
+    vi.useFakeTimers();
+    const pending = apiErrorOf(client(hangingFetch).upcycle(body));
+    await vi.advanceTimersByTimeAsync(REQUEST_TIMEOUT_MS);
+    expect((await pending).code).toBe('REQUEST_TIMEOUT');
   });
 });
 

@@ -8,7 +8,7 @@ Estados: Pendiente · En curso · Hecha. Prioridad: M = MVP, D = deseable. Cada 
 | ----- | ------------------------------------------------------------------------------------- | ---- | ---- | --------- |
 | HU-01 | Instalar la app (PWA)                                                                 | M    | F2   | Hecha     |
 | HU-02 | Capturar una foto                                                                     | M    | F2   | Hecha     |
-| HU-03 | Elegir el modo de escaneo (necesita `/scan/upcycle`)                                  | M    | F3   | Pendiente |
+| HU-03 | Elegir el modo de escaneo (necesita `/scan/upcycle`)                                  | M    | F3   | Hecha     |
 | HU-04 | Registro e inicio de sesión (correo verificado o Google)                              | M    | F4   | Pendiente |
 | HU-05 | Identificar el residuo (incluye `NOT_A_WASTE`)                                        | M    | F1   | Hecha     |
 | HU-06 | Saber dónde depositarlo                                                               | M    | F1   | Hecha     |
