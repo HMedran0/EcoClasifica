@@ -221,3 +221,103 @@ describe('api.health', () => {
     expect((await apiErrorOf(client(fetchFn).health())).code).toBe('NETWORK_ERROR');
   });
 });
+
+describe('Authorization', () => {
+  const headersOf = (fetchFn: ReturnType<typeof vi.fn<typeof fetch>>) =>
+    new Headers(fetchFn.mock.calls[0]![1]!.headers);
+  const withToken = (fetchFn: typeof fetch, getToken: () => Promise<string | null>) =>
+    createApiClient({ baseUrl: 'https://api.test', fetchFn, getToken });
+
+  it('con sesión envía Authorization: Bearer <access_token>', async () => {
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(200, ok));
+    await withToken(fetchFn, async () => 'tok-123').classify(body);
+    expect(headersOf(fetchFn).get('Authorization')).toBe('Bearer tok-123');
+    expect(headersOf(fetchFn).get('Content-Type')).toBe('application/json');
+  });
+
+  it('sin sesión no envía la cabecera', async () => {
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(200, ok));
+    await withToken(fetchFn, async () => null).classify(body);
+    expect(headersOf(fetchFn).has('Authorization')).toBe(false);
+  });
+
+  it('si no se puede leer la sesión, la petición sale anónima', async () => {
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(200, ok));
+    await withToken(fetchFn, () => Promise.reject(new Error('storage'))).classify(body);
+    expect(headersOf(fetchFn).has('Authorization')).toBe(false);
+  });
+
+  const unauthorized = () => jsonResponse(401, { error: { code: 'UNAUTHORIZED', message: 'x' } });
+  const withRenew = (fetchFn: typeof fetch, renewToken: () => Promise<string | null>) =>
+    createApiClient({
+      baseUrl: 'https://api.test',
+      fetchFn,
+      getToken: async () => 'viejo',
+      renewToken,
+    });
+  const authOfCall = (fetchFn: ReturnType<typeof vi.fn<typeof fetch>>, i: number) =>
+    new Headers(fetchFn.mock.calls[i]![1]!.headers).get('Authorization');
+
+  it('ante un 401 con token, si la sesión se renueva reintenta con el token nuevo', async () => {
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(unauthorized())
+      .mockResolvedValueOnce(jsonResponse(200, ok));
+    const renewToken = vi.fn(async () => 'nuevo');
+
+    await expect(withRenew(fetchFn, renewToken).classify(body)).resolves.toEqual(ok);
+    expect(renewToken).toHaveBeenCalledOnce();
+    expect(authOfCall(fetchFn, 0)).toBe('Bearer viejo');
+    expect(authOfCall(fetchFn, 1)).toBe('Bearer nuevo');
+  });
+
+  it('ante un 401 con token, si no se puede renovar reintenta anónimo', async () => {
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(unauthorized())
+      .mockResolvedValueOnce(jsonResponse(200, ok));
+
+    await expect(withRenew(fetchFn, async () => null).classify(body)).resolves.toEqual(ok);
+    expect(authOfCall(fetchFn, 1)).toBeNull();
+  });
+
+  it('si la renovación lanza un error también reintenta anónimo', async () => {
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(unauthorized())
+      .mockResolvedValueOnce(jsonResponse(200, ok));
+
+    await withRenew(fetchFn, () => Promise.reject(new Error('red'))).classify(body);
+    expect(authOfCall(fetchFn, 1)).toBeNull();
+  });
+
+  it('nunca reintenta más de una vez', async () => {
+    const fetchFn = vi.fn<typeof fetch>().mockImplementation(async () => unauthorized());
+    const err = await apiErrorOf(withRenew(fetchFn, async () => 'nuevo').classify(body));
+    expect(err.code).toBe('UNAUTHORIZED');
+    expect(fetchFn).toHaveBeenCalledTimes(2);
+  });
+
+  it('un 401 sin token no reintenta', async () => {
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(jsonResponse(401, { error: { code: 'UNAUTHORIZED', message: 'x' } }));
+    const err = await apiErrorOf(withToken(fetchFn, async () => null).classify(body));
+    expect(err.code).toBe('UNAUTHORIZED');
+    expect(fetchFn).toHaveBeenCalledOnce();
+  });
+
+  it('si se cancela mientras se obtiene el token, no envía nada', async () => {
+    const fetchFn = vi.fn<typeof fetch>();
+    const controller = new AbortController();
+    const getToken = async () => {
+      controller.abort();
+      return 'tok';
+    };
+    const err = await apiErrorOf(
+      withToken(fetchFn, getToken).classify(body, { signal: controller.signal }),
+    );
+    expect(err.code).toBe('ABORTED');
+    expect(fetchFn).not.toHaveBeenCalled();
+  });
+});

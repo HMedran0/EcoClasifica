@@ -20,3 +20,6 @@ jobs:
         env:
           # El build de producción del frontend exige VITE_API_URL (vite.config.ts); aquí basta una URL local.
           VITE_API_URL: http://localhost:3000
+          # Ficticias: el build de producción exige las de Supabase; no se usan en las pruebas.
+          VITE_SUPABASE_URL: https://ci-ficticio.supabase.co
+          VITE_SUPABASE_ANON_KEY: sb_publishable_ci_ficticia

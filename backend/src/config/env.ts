@@ -40,7 +40,6 @@ export const envSchema = z.object({
 
   SUPABASE_URL: supabaseUrlSchema.optional(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
-  SUPABASE_JWT_SECRET: z.string().optional(),
 
   ALLOWED_ORIGINS: z
     .string()

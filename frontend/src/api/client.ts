@@ -12,6 +12,7 @@ import {
   upcycleResponseSchema,
 } from '@ecoclasifica/shared';
 import type { z, ZodType } from 'zod';
+import { getAccessToken, renewOrClearSession } from '../features/auth/authStore';
 import { ApiError, isBackendErrorCode } from './errors';
 
 export const REQUEST_TIMEOUT_MS = 25_000;
@@ -23,6 +24,13 @@ export interface ApiClientOptions {
   baseUrl: string;
   fetchFn?: typeof fetch;
   timeoutMs?: number;
+  /** Access token de Supabase; con sesión se envía `Authorization: Bearer`. */
+  getToken?: () => Promise<string | null>;
+  /**
+   * El backend rechazó el token: devuelve uno renovado, o `null` si la sesión ya no es válida
+   * (y entonces se reintenta sin token).
+   */
+  renewToken?: () => Promise<string | null>;
 }
 
 export interface RequestOptions {
@@ -34,6 +42,8 @@ export function createApiClient({
   baseUrl,
   fetchFn = (...args) => fetch(...args),
   timeoutMs = REQUEST_TIMEOUT_MS,
+  getToken = async () => null,
+  renewToken = async () => null,
 }: ApiClientOptions) {
   async function request<T>(
     path: string,
@@ -41,7 +51,14 @@ export function createApiClient({
     schema: ZodType<T>,
     { signal }: RequestOptions = {},
   ): Promise<T> {
-    const { status, ok, json } = await send(path, init, signal);
+    const token = await getToken().catch(() => null);
+    let res = await send(path, init, token, signal);
+    // Un solo reintento: con el token renovado o, si no se pudo renovar, anónimo (escanear no exige sesión).
+    if (res.status === 401 && token) {
+      const renewed = await renewToken().catch(() => null);
+      res = await send(path, init, renewed, signal);
+    }
+    const { status, ok, json } = res;
     if (!ok) throw toApiError(status, json);
     const parsed = schema.safeParse(json);
     if (!parsed.success) throw new ApiError('UNEXPECTED_RESPONSE', status);
@@ -49,10 +66,16 @@ export function createApiClient({
   }
 
   /** El timeout cubre también la lectura del cuerpo, no solo la llegada de las cabeceras. */
-  async function send(path: string, init: SendInit, signal?: AbortSignal): Promise<RawResponse> {
+  async function send(
+    path: string,
+    init: SendInit,
+    token: string | null,
+    signal?: AbortSignal,
+  ): Promise<RawResponse> {
+    // Después de obtener el token: si se cancela mientras se renueva, no se envía.
     if (signal?.aborted) throw new ApiError('ABORTED');
     // Fuera del try: un error aquí es de programación, no de red.
-    const fetchInit = toFetchInit(init);
+    const fetchInit = withAuth(toFetchInit(init), token);
     const controller = new AbortController();
     let timedOut = false;
     const timer = setTimeout(() => {
@@ -99,6 +122,12 @@ function toFetchInit(init: SendInit): RequestInit {
   };
 }
 
+/** Sin token la petición sale anónima: escanear y el chat funcionan sin sesión. */
+function withAuth(init: RequestInit, token: string | null): RequestInit {
+  if (!token) return init;
+  return { ...init, headers: { ...init.headers, Authorization: `Bearer ${token}` } };
+}
+
 interface RawResponse {
   status: number;
   ok: boolean;
@@ -128,4 +157,6 @@ export type ApiClient = ReturnType<typeof createApiClient>;
 // Sin «/» final: las rutas ya empiezan por «/» (evita `//api/...`).
 export const api = createApiClient({
   baseUrl: (import.meta.env.VITE_API_URL ?? '').replace(/\/+$/, ''),
+  getToken: getAccessToken,
+  renewToken: renewOrClearSession,
 });
