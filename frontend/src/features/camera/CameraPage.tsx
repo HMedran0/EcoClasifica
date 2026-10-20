@@ -6,7 +6,9 @@ import {
   PhotoError,
   type CompressedPhoto,
 } from './compressImage';
+import { ModeSwitch } from './ModeSwitch';
 import { usePhotoStore } from './photoStore';
+import { useScanModeStore } from './scanModeStore';
 import { useCamera, type CameraStatus } from './useCamera';
 
 const GENERIC_ERROR = 'No pudimos preparar la foto. Intenta de nuevo.';
@@ -30,7 +32,7 @@ interface CameraPageProps {
   compressFile?: (file: File) => Promise<CompressedPhoto>;
 }
 
-/** HU-02: vista previa con la cámara trasera, captura y galería como alternativa. */
+/** HU-02/HU-03: vista previa con la cámara trasera, interruptor de modo y galería como alternativa. */
 export function CameraPage({
   compressFrame = compressVideoFrame,
   compressFile = compressImage,
@@ -40,6 +42,7 @@ export function CameraPage({
   const photo = usePhotoStore((s) => s.photo);
   const setPhoto = usePhotoStore((s) => s.setPhoto);
   const clearPhoto = usePhotoStore((s) => s.clear);
+  const mode = useScanModeStore((s) => s.mode);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Si el usuario sale mientras se comprime, la foto no debe quedar en el store.
@@ -92,6 +95,9 @@ export function CameraPage({
         {photo ? '¿Usamos esta foto?' : 'Toma una foto del residuo'}
       </h1>
 
+      {/* Visible con cámara y con vista previa: el modo se puede cambiar antes de usar la foto. */}
+      <ModeSwitch />
+
       {/* Siempre montado: `useCamera` necesita el elemento para conectar el flujo al reabrir. */}
       <video
         ref={videoRef}
@@ -113,7 +119,11 @@ export function CameraPage({
             <button type="button" className={SECONDARY_BUTTON} onClick={handleRetake}>
               Repetir
             </button>
-            <button type="button" className={PRIMARY_BUTTON} onClick={() => navigate('/resultado')}>
+            <button
+              type="button"
+              className={PRIMARY_BUTTON}
+              onClick={() => navigate(mode === 'upcycle' ? '/ideas' : '/resultado')}
+            >
               Usar foto
             </button>
           </div>

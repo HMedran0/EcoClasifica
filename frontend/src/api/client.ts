@@ -5,6 +5,8 @@ import {
   type ClassifyResponse,
   type HealthResponse,
   type scanRequestSchema,
+  type UpcycleResponse,
+  upcycleResponseSchema,
 } from '@ecoclasifica/shared';
 import type { z, ZodType } from 'zod';
 import { ApiError, isBackendErrorCode } from './errors';
@@ -71,6 +73,8 @@ export function createApiClient({
   return {
     classify: (req: ScanRequestInput, opts?: RequestOptions): Promise<ClassifyResponse> =>
       request('/api/v1/scan/classify', { method: 'POST', body: req }, classifyResponseSchema, opts),
+    upcycle: (req: ScanRequestInput, opts?: RequestOptions): Promise<UpcycleResponse> =>
+      request('/api/v1/scan/upcycle', { method: 'POST', body: req }, upcycleResponseSchema, opts),
     /** Indicador de conexión de la pantalla inicial (prueba de humo de CORS en producción). */
     health: (opts?: RequestOptions): Promise<HealthResponse> =>
       request('/api/health', { method: 'GET' }, healthResponseSchema, opts),
