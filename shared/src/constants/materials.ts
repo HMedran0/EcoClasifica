@@ -34,4 +34,9 @@ export const MAX_IMAGE_BASE64_LENGTH = Math.ceil(MAX_IMAGE_BYTES / 3) * 4;
 /** Longitud máxima de una etiqueta de idioma BCP 47 (p. ej. `es-CO`). */
 export const MAX_LOCALE_LENGTH = 35;
 export const UPCYCLE_IDEAS_COUNT = 3;
+/** Límites de lo que se entrega al cliente en upcycle (el backend recorta en palabra completa). */
+export const UPCYCLE_TITLE_MAX = 60;
+export const UPCYCLE_DESCRIPTION_MAX = 120;
+export const UPCYCLE_REASON_MAX = 160;
+export const UPCYCLE_EXTRA_MATERIALS_MAX = 5;
 export const DEFAULT_MUNICIPALITY = 'DEFAULT';

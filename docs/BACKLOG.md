@@ -4,25 +4,25 @@ Estados: Pendiente · En curso · Hecha. Prioridad: M = MVP, D = deseable. Cada 
 
 ## Historias
 
-| ID    | Historia                                                 | Prio | Fase | Estado    |
-| ----- | -------------------------------------------------------- | ---- | ---- | --------- |
-| HU-01 | Instalar la app (PWA)                                    | M    | F2   | Hecha     |
-| HU-02 | Capturar una foto                                        | M    | F2   | Hecha     |
-| HU-03 | Elegir el modo de escaneo (necesita `/scan/upcycle`)     | M    | F3   | Pendiente |
-| HU-04 | Registro e inicio de sesión (correo verificado o Google) | M    | F4   | Pendiente |
-| HU-05 | Identificar el residuo (incluye `NOT_A_WASTE`)           | M    | F1   | Hecha     |
-| HU-06 | Saber dónde depositarlo                                  | M    | F1   | Hecha     |
-| HU-07 | Baja certeza y alternativas (no-residuo ya en HU-05)     | M    | F1   | Hecha     |
-| HU-08 | Corregir el resultado                                    | D    | F4   | Pendiente |
-| HU-09 | Recibir ideas de upcycle                                 | M    | F3   | Pendiente |
-| HU-10 | Elegir una alternativa                                   | M    | F3   | Pendiente |
-| HU-11 | Chat paso a paso                                         | M    | F3   | Pendiente |
-| HU-12 | Guardar como favorita                                    | D    | F4   | Pendiente |
-| HU-13 | Ver mi historial                                         | M    | F4   | Pendiente |
-| HU-14 | Eliminar registros                                       | D    | F4   | Pendiente |
-| HU-15 | Ver mis favoritos                                        | M    | F4   | Pendiente |
-| HU-16 | Estadísticas personales                                  | D    | F4   | Pendiente |
-| HU-17 | Pantalla de resultado (UI de HU-05, HU-06 y HU-07)       | M    | F2   | Hecha     |
+| ID    | Historia                                                                              | Prio | Fase | Estado    |
+| ----- | ------------------------------------------------------------------------------------- | ---- | ---- | --------- |
+| HU-01 | Instalar la app (PWA)                                                                 | M    | F2   | Hecha     |
+| HU-02 | Capturar una foto                                                                     | M    | F2   | Hecha     |
+| HU-03 | Elegir el modo de escaneo (necesita `/scan/upcycle`)                                  | M    | F3   | Pendiente |
+| HU-04 | Registro e inicio de sesión (correo verificado o Google)                              | M    | F4   | Pendiente |
+| HU-05 | Identificar el residuo (incluye `NOT_A_WASTE`)                                        | M    | F1   | Hecha     |
+| HU-06 | Saber dónde depositarlo                                                               | M    | F1   | Hecha     |
+| HU-07 | Baja certeza y alternativas (no-residuo ya en HU-05)                                  | M    | F1   | Hecha     |
+| HU-08 | Corregir el resultado                                                                 | D    | F4   | Pendiente |
+| HU-09 | Recibir ideas de upcycle                                                              | M    | F3   | Hecha     |
+| HU-10 | Elegir una alternativa                                                                | M    | F3   | Pendiente |
+| HU-11 | Chat paso a paso                                                                      | M    | F3   | Pendiente |
+| HU-12 | Guardar como favorita                                                                 | D    | F4   | Pendiente |
+| HU-13 | Ver mi historial                                                                      | M    | F4   | Pendiente |
+| HU-14 | Eliminar registros                                                                    | D    | F4   | Pendiente |
+| HU-15 | Ver mis favoritos                                                                     | M    | F4   | Pendiente |
+| HU-16 | Estadísticas personales                                                               | D    | F4   | Pendiente |
+| HU-17 | Pantalla de resultado (UI de HU-05, HU-06 y HU-07)                                    | M    | F2   | Hecha     |
 | HU-18 | Botón «Instalar app» en la portada (`beforeinstallprompt`, solo si no está instalada) | D    | F3   | Pendiente |
 
 ## Fases y criterios de salida
