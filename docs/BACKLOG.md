@@ -23,7 +23,7 @@ Estados: Pendiente · En curso · Hecha. Prioridad: M = MVP, D = deseable. Cada 
 | HU-15 | Ver mis favoritos                                                                     | M    | F4   | Pendiente |
 | HU-16 | Estadísticas personales                                                               | D    | F4   | Pendiente |
 | HU-17 | Pantalla de resultado (UI de HU-05, HU-06 y HU-07)                                    | M    | F2   | Hecha     |
-| HU-18 | Botón «Instalar app» en la portada (`beforeinstallprompt`, solo si no está instalada) | D    | F3   | Pendiente |
+| HU-18 | Botón «Instalar app» en la portada (`beforeinstallprompt`, solo si no está instalada) | D    | F3   | Hecha     |
 
 ## Fases y criterios de salida
 

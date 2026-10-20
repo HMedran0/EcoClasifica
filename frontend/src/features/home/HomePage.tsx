@@ -1,4 +1,5 @@
 import { Link } from 'react-router';
+import { InstallButton } from '../../pwa/InstallButton';
 import { useOnlineStatus } from '../../pwa/useOnlineStatus';
 import { ServiceStatus } from './ServiceStatus';
 
@@ -37,6 +38,7 @@ export function HomePage() {
           </p>
         </div>
       )}
+      <InstallButton />
       <ServiceStatus />
     </main>
   );
