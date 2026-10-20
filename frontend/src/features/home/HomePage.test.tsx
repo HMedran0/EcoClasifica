@@ -1,6 +1,7 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
+import { listenForInstallPrompt } from '../../pwa/installPrompt';
 import { setOnline } from '../../test/network';
 import { HomePage } from './HomePage';
 
@@ -69,5 +70,31 @@ describe('HomePage', () => {
       '/camara',
     );
     expect(screen.queryByText('Escanear requiere internet')).not.toBeInTheDocument();
+  });
+
+  it('muestra «Instalar app» debajo de «Escanear residuo» si el navegador lo permite', () => {
+    const stopListening = listenForInstallPrompt();
+    try {
+      render(
+        <MemoryRouter>
+          <HomePage />
+        </MemoryRouter>,
+      );
+      act(() => {
+        window.dispatchEvent(
+          Object.assign(new Event('beforeinstallprompt'), {
+            prompt: () => Promise.resolve(),
+            userChoice: Promise.resolve({ outcome: 'accepted', platform: 'web' }),
+          }),
+        );
+      });
+      const scan = screen.getByRole('link', { name: 'Escanear residuo' });
+      const install = screen.getByRole('button', { name: 'Instalar app' });
+      expect(scan.compareDocumentPosition(install) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    } finally {
+      act(() => {
+        stopListening();
+      });
+    }
   });
 });

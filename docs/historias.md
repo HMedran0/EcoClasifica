@@ -81,6 +81,14 @@ Como usuario, quiero ver con claridad qué es el residuo y dónde va, para depos
 
 Fuera de alcance: corregir el resultado (HU-08) y guardar en el historial.
 
+## HU-18 (D) Botón «Instalar app»
+
+Como usuario, quiero un botón visible para instalar la app sin buscarla en el menú del navegador.
+
+- Dado que el navegador permite instalarla (`beforeinstallprompt`), entonces veo «Instalar app» en la portada, debajo de «Escanear residuo» y con menos peso visual.
+- Dado que lo toco, entonces se abre el cuadro de instalación del navegador; acepte o cancele, el botón desaparece en esa sesión.
+- Dado que la app ya está instalada o el navegador no lo permite (por ejemplo iOS), entonces no veo el botón.
+
 ## HU-09 (M) Recibir ideas de upcycle
 
 Como usuario, quiero 3 ideas creativas para reutilizar el objeto.

@@ -4,20 +4,19 @@ _Actualizado: 2026-10-19 · Reescribir completo en cada `/handoff` (≤ 40 líne
 
 ## Fase actual
 
-**F3 — Upcycle:** en curso. HU-09, HU-03, **HU-10 y HU-11 hechas** (rama `feat/HU-10-11-chat`, fusionada en `main`). Falta HU-18 (mejora).
+**F3 — Upcycle:** historias completas (HU-09, HU-03, HU-10, HU-11 y **HU-18 hecha**, rama `feat/HU-18-instalar-app` fusionada en `main`). Falta verificar el criterio de salida con `/phase-check`.
 
-## HU-10 + HU-11 (chat paso a paso)
+## HU-18 (botón «Instalar app»)
 
-- `POST /api/v1/chat` (`chat.service/controller/routes`): idea validada con límites de upcycle; `objectName`/`title` con término bloqueado → `422 UNSAFE_REQUEST` sin IA. Hasta 50 mensajes, a la IA los últimos 10; `role` solo `user`/`assistant`; último del usuario. Respuesta en texto plano (`toPlainText`). Limitador 20/min y JSON ≤ 64 KB. Log solo métricas.
-- `chatSystem`: pasos numerados, materiales de la idea primero (otros «(opcional)»), advertencias, reconduce, se niega a armas/explosivos/venenos/combustibles, idea y mensajes como datos.
-- Términos bloqueados nuevos (también en upcycle): explosivo, bomba casera, molotov, arma, polvora.
-- Frontend: tarjetas de `/ideas` son botones → `/chat` (estado `{ ideaIndex }`); sin idea → `/camara`. `ChatPage`: encabezado, 3 sugerencias, «Escribiendo…», error con «Reintentar», `aria-live`, listas como texto. Hilos en `photoStore.chats`; se borran con `setPhoto`/`clear` o ideas nuevas.
-- Spike real (`npm run spike:chat [-- normal|ajena|inyeccion|peligrosa]`): las 4 OK; ~300 tokens de entrada, ≤ 234 de salida, 1,4–2,5 s.
-- `npm run check` OK (backend 169, frontend 142). `code-reviewer` sin bloqueantes.
+- `pwa/installPrompt.ts`: `listenForInstallPrompt()` se llama en `main.tsx` antes de renderizar (Chrome puede emitir `beforeinstallprompt` antes de montar la portada); `preventDefault` + guarda el evento; `appinstalled` lo descarta. `useCanInstall()` con `useSyncExternalStore`; oculto en `display-mode: standalone` o sin soporte (iOS).
+- `promptInstall()` descarta el evento al tocar (evita doble `prompt()`); acepte o cancele, no se vuelve a ofrecer en la sesión aunque llegue otro evento.
+- `pwa/InstallButton.tsx`: secundario (borde `petroleo`, sin lima, `min-h-tactil`), debajo de «Escanear residuo» en `HomePage`.
+- Sección HU-18 añadida a `docs/historias.md`. Pruebas: sin soporte, evento temprano, aceptar, cancelar sin reofrecer, `appinstalled`, standalone, estilo, orden en portada.
+- `npm run check` OK (backend 169, frontend 151). `code-reviewer` sin bloqueantes.
 
 ## Decisiones
 
-- ADR-25: seguridad, recorte y memoria del chat. ADR-24: modo en memoria y caché por foto.
+- Sin ADR nuevo. Vigentes recientes: ADR-25 (chat), ADR-24 (modo en memoria y caché por foto).
 
 ## Problemas abiertos
 
@@ -29,9 +28,10 @@ _Actualizado: 2026-10-19 · Reescribir completo en cada `/handoff` (≤ 40 líne
 6. Alinear Vitest del backend (v2) con el frontend (v5).
 7. Logo oficial pendiente. Normativa de contenedores de San Juan Nepomuceno sin confirmar.
 8. Upcycle: menores de HU-09 (no partir emojis al recortar; `parse` final).
-9. Chat, menores: `description`/`extraMaterials` solo los protege el prompt; `scanId` sin uso (en F4 filtrar por `req.user.id`); respuesta en vuelo puede dejar un hilo huérfano si llegan ideas nuevas; `toPlainText` no quita viñetas `*` ni enlaces.
-10. Sin confirmar en Railway/Vercel: `/scan/upcycle` y `/chat` desplegados; prueba en un móvil real.
+9. Chat, menores: `description`/`extraMaterials` solo los protege el prompt; `scanId` sin uso (en F4 filtrar por `req.user.id`); hilo huérfano posible; `toPlainText` no quita viñetas `*` ni enlaces.
+10. HU-18: el botón no reacciona a un cambio de `display-mode` sin `appinstalled` (irrelevante en la práctica).
+11. Sin confirmar en Railway/Vercel: `/scan/upcycle`, `/chat` y el botón «Instalar app» en un móvil Android real.
 
 ## Siguiente acción
 
-Desplegar (Railway + Vercel) y probar en el móvil: `/ideas` → tocar una idea → chat (sugerencia, pregunta propia, volver y regresar). Luego `/story HU-18` para cerrar F3 y `/phase-check`.
+Desplegar (Railway + Vercel) y probar en un Android real: botón «Instalar app» (aparece, instala, desaparece), `/ideas` → idea → chat. Luego `/phase-check` para cerrar F3.
