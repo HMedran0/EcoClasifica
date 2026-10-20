@@ -58,8 +58,19 @@ const ideaRowSchema = z
 
 const ideaFavoriteRowSchema = z.object({ id: z.string().uuid(), idea_id: z.string().uuid() });
 
+// Los errores de Postgres solo llevan su código: el mensaje puede citar la fila.
 const FAVORITE_COLUMNS =
   'id, idea_id, object_name, difficulty, title, description, extra_materials, created_at';
+
+/**
+ * Valida filas de Postgres. Una fila inválida es un error interno (500): el `ZodError` llegaría al
+ * manejador como un 400 del cliente, y su detalle podría citar datos de la fila.
+ */
+function parseRow<S extends z.ZodTypeAny>(schema: S, row: unknown): z.output<S> {
+  const parsed = schema.safeParse(row);
+  if (!parsed.success) throw new Error('Fila de favoritos con forma inválida');
+  return parsed.data as z.output<S>;
+}
 
 /** Violación de `unique (user_id, idea_id)`: otra petición guardó la misma idea a la vez. */
 const UNIQUE_VIOLATION = '23505';
@@ -92,8 +103,8 @@ export function createSupabaseFavoritesRepo(
         .eq('id', ideaId)
         .eq('scans.user_id', userId)
         .maybeSingle();
-      if (error) throw new Error(`No se pudo leer la idea: ${error.message}`);
-      return data ? ideaRowSchema.parse(data) : null;
+      if (error) throw new Error(`No se pudo leer la idea (${error.code})`);
+      return data ? parseRow(ideaRowSchema, data) : null;
     },
 
     async findByIdea(userId, ideaId) {
@@ -102,8 +113,8 @@ export function createSupabaseFavoritesRepo(
         .eq('user_id', userId)
         .eq('idea_id', ideaId)
         .maybeSingle();
-      if (error) throw new Error(`No se pudo leer el favorito: ${error.message}`);
-      return data ? favoriteRowSchema.parse(data) : null;
+      if (error) throw new Error(`No se pudo leer el favorito (${error.code})`);
+      return data ? parseRow(favoriteRowSchema, data) : null;
     },
 
     async insert(userId, snapshot) {
@@ -120,8 +131,8 @@ export function createSupabaseFavoritesRepo(
         .select(FAVORITE_COLUMNS)
         .single();
       if (error?.code === UNIQUE_VIOLATION) return null;
-      if (error) throw new Error(`No se pudo guardar el favorito: ${error.message}`);
-      return favoriteRowSchema.parse(data);
+      if (error) throw new Error(`No se pudo guardar el favorito (${error.code})`);
+      return parseRow(favoriteRowSchema, data);
     },
 
     async remove(userId, favoriteId) {
@@ -130,7 +141,7 @@ export function createSupabaseFavoritesRepo(
         .eq('user_id', userId)
         .eq('id', favoriteId)
         .select('id');
-      if (error) throw new Error(`No se pudo quitar el favorito: ${error.message}`);
+      if (error) throw new Error(`No se pudo quitar el favorito (${error.code})`);
       return (data ?? []).length > 0;
     },
 
@@ -141,9 +152,9 @@ export function createSupabaseFavoritesRepo(
         .order('created_at', { ascending: false })
         .order('id', { ascending: false })
         .range(offset, offset + limit - 1);
-      if (error) throw new Error(`No se pudieron leer los favoritos: ${error.message}`);
+      if (error) throw new Error(`No se pudieron leer los favoritos (${error.code})`);
       const rows: unknown[] = data ?? [];
-      return rows.map((row) => favoriteRowSchema.parse(row));
+      return rows.map((row) => parseRow(favoriteRowSchema, row));
     },
 
     async idsByIdeas(userId, ideaIds) {
@@ -152,11 +163,11 @@ export function createSupabaseFavoritesRepo(
         .select('id, idea_id')
         .eq('user_id', userId)
         .in('idea_id', ideaIds);
-      if (error) throw new Error(`No se pudieron leer los favoritos: ${error.message}`);
+      if (error) throw new Error(`No se pudieron leer los favoritos (${error.code})`);
       const rows: unknown[] = data ?? [];
       return new Map(
         rows.map((row) => {
-          const { id, idea_id } = ideaFavoriteRowSchema.parse(row);
+          const { id, idea_id } = parseRow(ideaFavoriteRowSchema, row);
           return [idea_id, id];
         }),
       );

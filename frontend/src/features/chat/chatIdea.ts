@@ -7,10 +7,14 @@ import {
 import { capitalizeFirst } from '../classify/materialLabels';
 
 /**
- * Adapta una idea de upcycle al contrato de /chat: el nombre del objeto y los materiales de la IA
- * no tienen los mismos límites, así que se limpian y recortan aquí para no recibir un 400.
+ * Adapta una idea de upcycle (o la copia de un favorito) al contrato de /chat: el nombre del objeto
+ * y los materiales de la IA no tienen los mismos límites, así que se limpian y recortan aquí para
+ * no recibir un 400.
  */
-export function toChatIdea(objectName: string, idea: Idea): ChatIdea {
+export function toChatIdea(
+  objectName: string,
+  idea: Pick<Idea, 'title' | 'description' | 'extraMaterials'>,
+): ChatIdea {
   return {
     objectName: cut(capitalizeFirst(objectName.trim()) || 'Residuo', IDEA_OBJECT_NAME_MAX),
     title: idea.title.trim() || 'Idea sin título',

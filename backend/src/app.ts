@@ -12,6 +12,10 @@ import {
   createSupabaseDisposalRulesRepo,
   type DisposalRulesRepo,
 } from './repositories/disposalRules.repo';
+import {
+  createSupabaseChatMessagesRepo,
+  type ChatMessagesRepo,
+} from './repositories/chatMessages.repo';
 import { createSupabaseFavoritesRepo, type FavoritesRepo } from './repositories/favorites.repo';
 import { createSupabaseProfilesRepo, type ProfilesRepo } from './repositories/profiles.repo';
 import { createSupabaseScansRepo, type ScansRepo } from './repositories/scans.repo';
@@ -34,6 +38,8 @@ export interface AppDeps {
   scansRepo?: ScansRepo;
   /** Favoritos inyectables (en memoria en pruebas). */
   favoritesRepo?: FavoritesRepo;
+  /** Hilos del chat guardados inyectables (en memoria en pruebas). */
+  chatMessagesRepo?: ChatMessagesRepo;
   /** Logger de peticiones inyectable (las pruebas capturan su salida). */
   logger?: Logger;
 }
@@ -46,6 +52,7 @@ export function createApp(deps: AppDeps = {}) {
   const profiles = deps.profilesRepo ?? createSupabaseProfilesRepo();
   const scans = deps.scansRepo ?? createSupabaseScansRepo();
   const favorites = deps.favoritesRepo ?? createSupabaseFavoritesRepo();
+  const chatMessages = deps.chatMessagesRepo ?? createSupabaseChatMessagesRepo();
   const app = express();
 
   // Detrás del proxy de Railway: necesario para ver la IP real en el rate limiting.
@@ -63,7 +70,8 @@ export function createApp(deps: AppDeps = {}) {
   );
   // Antes del parser: se rechaza el exceso sin leer ni parsear hasta 6 MB por petición.
   app.use('/api/v1/scan', createScanLimiter());
-  app.use('/api/v1/chat', createChatLimiter());
+  // Solo enviar mensajes cuenta en el límite; leer el hilo guardado (GET) no.
+  app.post('/api/v1/chat', createChatLimiter());
   // El chat es solo texto (≤ 50 mensajes de 1 000 caracteres): no necesita el límite de 6 MB.
   app.use('/api/v1/chat', express.json({ limit: '64kb' }));
   // 6 MB: la imagen (≤ 4 MB) viaja en Base64, que pesa ~33 % más.
@@ -72,7 +80,7 @@ export function createApp(deps: AppDeps = {}) {
   app.use('/api', routes);
   app.use(
     '/api/v1',
-    createV1Routes({ ai: aiProvider, disposal, profiles, scans, favorites }, auth),
+    createV1Routes({ ai: aiProvider, disposal, profiles, scans, favorites, chatMessages }, auth),
   );
 
   app.use(notFound);

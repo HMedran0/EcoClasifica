@@ -16,5 +16,6 @@ export function createChatRoutes(deps: ChatDeps, auth: AuthMiddlewares) {
     validate(chatRequestSchema),
     asyncHandler(controller.send),
   );
+  router.get('/chat/:ideaId/messages', auth.requireAuth, asyncHandler(controller.messages));
   return router;
 }

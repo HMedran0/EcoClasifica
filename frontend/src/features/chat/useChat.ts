@@ -1,5 +1,6 @@
 import {
   MAX_CHAT_MESSAGES,
+  type ChatHistoryResponse,
   type ChatIdea,
   type ChatMessage,
   type ChatResponse,
@@ -10,9 +11,18 @@ import { ApiError, errorMessage, type ApiErrorCode } from '../../api/errors';
 import { usePhotoStore } from '../camera/photoStore';
 
 export type ChatRequest = (req: ChatRequestInput, opts?: RequestOptions) => Promise<ChatResponse>;
+export type ChatThreadRequest = (
+  ideaId: string,
+  opts?: RequestOptions,
+) => Promise<ChatHistoryResponse>;
 
 export type ChatStatus =
-  { kind: 'idle' } | { kind: 'sending' } | { kind: 'error'; code: ApiErrorCode; message: string };
+  | { kind: 'idle' }
+  | { kind: 'loading' }
+  | { kind: 'sending' }
+  | { kind: 'error'; code: ApiErrorCode; message: string };
+
+const LOAD_FAILED = 'No pudimos cargar la conversación guardada. Intenta de nuevo.';
 
 const EMPTY: ChatMessage[] = [];
 
@@ -35,30 +45,66 @@ const errorStatus = (code: ApiErrorCode): ChatStatus => ({
 });
 
 interface UseChatOptions {
-  ideaIndex: number;
+  ideaIndex?: number;
   idea: ChatIdea;
   scanId: string | null;
+  /** HU-15: idea guardada con sesión. El hilo se carga y se guarda en el servidor. */
+  savedIdeaId: string | null;
   /** Hilo en `photoStore` (el índice de la idea, o uno propio para las del historial). */
   threadKey: string;
   request: ChatRequest;
+  loadThread: ChatThreadRequest;
 }
 
 /**
  * HU-11: hilo del chat de una idea. Vive en `photoStore` (en memoria), así que se conserva al
  * volver a /ideas y se borra al cambiar de foto. Solo viajan los últimos 10 mensajes.
+ * HU-15: con `savedIdeaId`, el hilo se carga del servidor al abrir y solo viaja la pregunta nueva:
+ * el servidor arma el contexto con lo guardado.
  */
-export function useChat({ ideaIndex, idea, scanId, threadKey, request }: UseChatOptions) {
+export function useChat({
+  ideaIndex,
+  idea,
+  scanId,
+  savedIdeaId,
+  threadKey,
+  request,
+  loadThread,
+}: UseChatOptions) {
   const messages = usePhotoStore((s) => s.chats[threadKey] ?? EMPTY);
   const saveChat = usePhotoStore((s) => s.saveChat);
   // Si se salió de la pantalla antes de la respuesta, el hilo termina en una pregunta sin responder.
-  const [status, setStatus] = useState<ChatStatus>(() =>
-    messages.at(-1)?.role === 'user' ? errorStatus('ABORTED') : { kind: 'idle' },
-  );
+  const [status, setStatus] = useState<ChatStatus>(() => {
+    if (savedIdeaId) return { kind: 'loading' };
+    return messages.at(-1)?.role === 'user' ? errorStatus('ABORTED') : { kind: 'idle' };
+  });
+  const [loaded, setLoaded] = useState(savedIdeaId === null);
+  // `loadAttempt` cambia con «Reintentar» si falló la carga del hilo.
+  const [loadAttempt, setLoadAttempt] = useState(0);
   // `id` distingue dos respuestas iguales seguidas para que el lector de pantalla las anuncie.
   const [lastReply, setLastReply] = useState({ id: 0, text: '' });
   const controllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => () => controllerRef.current?.abort(), []);
+
+  useEffect(() => {
+    if (!savedIdeaId) return;
+    const controller = new AbortController();
+    loadThread(savedIdeaId, { signal: controller.signal }).then(
+      ({ items }) => {
+        if (controller.signal.aborted) return;
+        saveChat(threadKey, items);
+        setLoaded(true);
+        setStatus({ kind: 'idle' });
+      },
+      (err: unknown) => {
+        if (controller.signal.aborted) return;
+        const code = err instanceof ApiError ? err.code : 'UNEXPECTED_RESPONSE';
+        setStatus({ kind: 'error', code, message: LOAD_FAILED });
+      },
+    );
+    return () => controller.abort();
+  }, [savedIdeaId, loadAttempt, loadThread, saveChat, threadKey]);
 
   function ask(thread: ChatMessage[]) {
     controllerRef.current?.abort();
@@ -66,10 +112,12 @@ export function useChat({ ideaIndex, idea, scanId, threadKey, request }: UseChat
     controllerRef.current = controller;
     setStatus({ kind: 'sending' });
     const body: ChatRequestInput = {
-      ideaIndex,
       idea,
-      messages: thread.slice(-MAX_CHAT_MESSAGES),
+      // Con la idea guardada, el servidor pone los mensajes anteriores.
+      messages: thread.slice(savedIdeaId ? -1 : -MAX_CHAT_MESSAGES),
+      ...(ideaIndex === undefined ? {} : { ideaIndex }),
       ...(scanId ? { scanId } : {}),
+      ...(savedIdeaId ? { ideaId: savedIdeaId } : {}),
     };
     request(body, { signal: controller.signal }).then(
       ({ reply }) => {
@@ -88,16 +136,20 @@ export function useChat({ ideaIndex, idea, scanId, threadKey, request }: UseChat
   /** Añade la pregunta al hilo (queda guardada aunque falle) y pide la respuesta. */
   function send(text: string) {
     const content = text.trim();
-    if (!content || status.kind === 'sending') return;
+    if (!content || !loaded || status.kind === 'sending') return;
     const thread: ChatMessage[] = [...messages, { role: 'user', content }];
     saveChat(threadKey, thread);
     ask(thread);
   }
 
-  /** Reenvía el mismo hilo, que termina en la pregunta sin respuesta. */
+  /** Vuelve a cargar el hilo guardado, o reenvía el hilo que termina en la pregunta sin respuesta. */
   function retry() {
-    if (messages.at(-1)?.role === 'user') ask(messages);
+    if (!loaded) {
+      setStatus({ kind: 'loading' });
+      setLoadAttempt((n) => n + 1);
+    } else if (messages.at(-1)?.role === 'user') ask(messages);
   }
 
-  return { messages, status, lastReply, send, retry };
+  /** `ready`: sin hilo guardado pendiente de cargar (antes no se puede enviar). */
+  return { messages, status, lastReply, ready: loaded, send, retry };
 }

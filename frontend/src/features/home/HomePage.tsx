@@ -49,6 +49,14 @@ export function HomePage() {
           Mi historial
         </Link>
       )}
+      {signedIn && (
+        <Link
+          to="/favoritos"
+          className={`${SCAN_BUTTON} border-2 border-bosque text-base font-semibold text-bosque`}
+        >
+          Mis favoritos
+        </Link>
+      )}
       <AccountStatus />
       <InstallButton />
       <ServiceStatus />

@@ -4,19 +4,20 @@ Base: `/api/v1` (salud en `/api/health`). JSON siempre. Auth: `Authorization: Be
 
 ## Endpoints
 
-| Método | Ruta                    | Auth     | Descripción                             |
-| ------ | ----------------------- | -------- | --------------------------------------- |
-| POST   | `/api/v1/scan/classify` | Opcional | Modo A: clasifica y devuelve contenedor |
-| POST   | `/api/v1/scan/upcycle`  | Opcional | Modo B: 3 ideas de segunda vida         |
-| POST   | `/api/v1/chat`          | Opcional | Chat paso a paso sobre una idea         |
-| GET    | `/api/v1/me`            | Sí       | Perfil del usuario con sesión           |
-| GET    | `/api/v1/history`       | Sí       | Escaneos del usuario (paginado)         |
-| GET    | `/api/v1/history/:id`   | Sí       | Detalle de un escaneo                   |
-| DELETE | `/api/v1/history/:id`   | Sí       | Elimina escaneo e imagen                |
-| GET    | `/api/v1/favorites`     | Sí       | Ideas favoritas                         |
-| POST   | `/api/v1/favorites`     | Sí       | Guarda una idea (`{ ideaId }`)          |
-| DELETE | `/api/v1/favorites/:id` | Sí       | Quita una favorita                      |
-| GET    | `/api/health`           | No       | Estado del servicio                     |
+| Método | Ruta                            | Auth     | Descripción                             |
+| ------ | ------------------------------- | -------- | --------------------------------------- |
+| POST   | `/api/v1/scan/classify`         | Opcional | Modo A: clasifica y devuelve contenedor |
+| POST   | `/api/v1/scan/upcycle`          | Opcional | Modo B: 3 ideas de segunda vida         |
+| POST   | `/api/v1/chat`                  | Opcional | Chat paso a paso sobre una idea         |
+| GET    | `/api/v1/chat/:ideaId/messages` | Sí       | Hilo guardado del chat de una idea      |
+| GET    | `/api/v1/me`                    | Sí       | Perfil del usuario con sesión           |
+| GET    | `/api/v1/history`               | Sí       | Escaneos del usuario (paginado)         |
+| GET    | `/api/v1/history/:id`           | Sí       | Detalle de un escaneo                   |
+| DELETE | `/api/v1/history/:id`           | Sí       | Elimina escaneo e imagen                |
+| GET    | `/api/v1/favorites`             | Sí       | Ideas favoritas                         |
+| POST   | `/api/v1/favorites`             | Sí       | Guarda una idea (`{ ideaId }`)          |
+| DELETE | `/api/v1/favorites/:id`         | Sí       | Quita una favorita                      |
+| GET    | `/api/health`                   | No       | Estado del servicio                     |
 
 Respuesta de `/api/health` (`healthResponseSchema`): `{ status: 'ok', service: 'ecoclasifica-api', time: <ISO 8601> }`. La pantalla inicial la usa como indicador de conexión (prueba de humo de CORS).
 
@@ -24,7 +25,7 @@ Sin token, los endpoints de escaneo funcionan pero no guardan nada (`saved: fals
 
 ### Autenticación (HU-04)
 
-- `optionalAuth` (`/scan/*`, `/chat`): sin cabecera `Authorization` → anónimo; con cabecera y token inválido, vencido o mal formado → `401 UNAUTHORIZED`. Con sesión, `/scan/*` guarda el escaneo (HU-13); `/chat` aún no guarda nada.
+- `optionalAuth` (`/scan/*`, `/chat`): sin cabecera `Authorization` → anónimo; con cabecera y token inválido, vencido o mal formado → `401 UNAUTHORIZED`. Con sesión, `/scan/*` guarda el escaneo (HU-13) y `/chat` con `ideaId` guarda el hilo (HU-15).
 - `requireAuth` (`/me`, historial, favoritos): sin cabecera `Authorization` → `401 UNAUTHORIZED` «Inicia sesión para continuar»; token inválido, vencido o mal formado → `401` «Tu sesión no es válida o venció».
 - El token se valida con `supabase.auth.getClaims(token)`: con claves de firma asimétricas verifica en local contra el JWKS (en caché); con el secreto simétrico (HS256) recurre a `getUser()` (una llamada a Supabase Auth). Rechaza tokens vencidos.
 - Con «Confirm email» activo, Supabase no emite sesión a correos sin verificar.
@@ -204,7 +205,7 @@ Solicitud (`createFavoriteSchema`): `{ "ideaId": "uuid" }`. Cualquier otro campo
 
 ### GET /favorites?page=N
 
-Respuesta 200 (`favoritesListResponseSchema`): `{ items: Favorite[], page, pageSize: 20, hasMore }`, más recientes primero (desempate por `id`). La pantalla llega en HU-15.
+Respuesta 200 (`favoritesListResponseSchema`): `{ items: Favorite[], page, pageSize: 20, hasMore }`, más recientes primero (desempate por `id`). Pantalla `/favoritos` (HU-15).
 
 ## POST /chat
 
@@ -214,6 +215,7 @@ Solo texto, sesión opcional. Guía paso a paso sobre una idea de upcycle (HU-10
 {
   "scanId": "uuid (opcional)",
   "ideaIndex": 0,
+  "ideaId": "uuid (opcional, HU-15)",
   "idea": {
     "objectName": "Frasco de vidrio",
     "title": "Portalápices decorado",
@@ -226,11 +228,18 @@ Solo texto, sesión opcional. Guía paso a paso sobre una idea de upcycle (HU-10
 
 Respuesta 200: `{ "reply": "1. Lava el frasco…\n2. …", "usage": { "promptTokens": 380, "completionTokens": 210 } }`.
 
+- `ideaIndex` es opcional (un favorito no lo conoce); solo se usa en métricas.
+- **Con sesión e `ideaId` (HU-15):** la idea sale de `scan_ideas` + `scans` filtrando por el usuario (ajena o inexistente → `404 NOT_FOUND` sin llamar a la IA) y se ignora la del cliente. Del cliente solo cuenta el **último** mensaje (debe ser `user`); el contexto es los últimos 9 guardados en `chat_messages` más ese, así que no se pueden inventar mensajes anteriores. Tras una respuesta correcta se guardan la pregunta y la respuesta (`user_id`, `idea_id`); si guardar falla, la respuesta llega igual y se registra un `warn` sin el texto.
+- **Sin sesión o sin `ideaId`** (por ejemplo, un favorito cuyo escaneo se borró): como en HU-11, nada se guarda.
 - `idea` la envía el cliente y no es confiable: mismos límites que upcycle (`objectName` ≤ 80, `title` ≤ 60, `description` ≤ 120, `extraMaterials` ≤ 5 de ≤ 60 caracteres). Si `objectName` o `title` tienen un término bloqueado de upcycle → `422 UNSAFE_REQUEST` sin llamar a la IA.
 - `messages`: 1 a 50, `role` solo `user` | `assistant` (nunca `system`), `content` de 1 a 1 000 caracteres y el último debe ser del usuario. A la IA solo van los **últimos 10** (control de costos).
 - `reply` en texto plano: el backend quita HTML y negritas de markdown; conserva saltos de línea y listas numeradas. Vacía → `502 AI_BAD_RESPONSE`.
 - Prompt (`chatSystem`): solo esa manualidad, pasos numerados cortos, advertencias (corte, calor, vidrio, adulto), reconduce lo ajeno, se niega a armas, explosivos, venenos, mezclas peligrosas y almacenar combustibles. Mensajes e idea son datos, no instrucciones.
-- `DEEPSEEK_CHAT_MAX_TOKENS` (512), `thinking` desactivado, mismo timeout (`504 AI_TIMEOUT`). Límite propio: 20 mensajes por minuto por IP (`429 RATE_LIMITED`). Sin sesión no se guarda nada (persistencia en `chat_messages`: F4).
+- `DEEPSEEK_CHAT_MAX_TOKENS` (512), `thinking` desactivado, mismo timeout (`504 AI_TIMEOUT`). Límite propio: 20 mensajes por minuto por IP (`429 RATE_LIMITED`); solo cuenta `POST /chat`.
+
+### GET /chat/:ideaId/messages (HU-15)
+
+Requiere sesión. Respuesta 200 (`chatHistoryResponseSchema`): `{ items: [{ role, content }] }`, los **últimos 50** del usuario para esa idea, del más antiguo al más nuevo. Idea ajena, inexistente o id mal formado → `404 NOT_FOUND`. El frontend lo usa para retomar el chat desde `/ideas`, el historial y favoritos.
 
 ## Errores
 

@@ -1,11 +1,15 @@
 import {
+  chatHistoryResponseSchema,
   chatResponseSchema,
+  type ChatHistoryResponse,
   classifyResponseSchema,
   type ChatResponse,
   type chatRequestSchema,
   errorBodySchema,
   favoriteSchema,
+  favoritesListResponseSchema,
   type Favorite,
+  type FavoritesListResponse,
   healthResponseSchema,
   historyDetailSchema,
   historyListResponseSchema,
@@ -110,6 +114,14 @@ export function createApiClient({
       request('/api/v1/scan/upcycle', { method: 'POST', body: req }, upcycleResponseSchema, opts),
     chat: (req: ChatRequestInput, opts?: RequestOptions): Promise<ChatResponse> =>
       request('/api/v1/chat', { method: 'POST', body: req }, chatResponseSchema, opts),
+    /** HU-15: el hilo guardado del chat de una idea propia (requiere sesión). */
+    chatMessages: (ideaId: string, opts?: RequestOptions): Promise<ChatHistoryResponse> =>
+      request(
+        `/api/v1/chat/${encodeURIComponent(ideaId)}/messages`,
+        { method: 'GET' },
+        chatHistoryResponseSchema,
+        opts,
+      ),
     /** HU-13: una página del historial (requiere sesión). */
     history: (page: number, opts?: RequestOptions): Promise<HistoryListResponse> =>
       request(`/api/v1/history?page=${page}`, { method: 'GET' }, historyListResponseSchema, opts),
@@ -118,6 +130,14 @@ export function createApiClient({
         `/api/v1/history/${encodeURIComponent(id)}`,
         { method: 'GET' },
         historyDetailSchema,
+        opts,
+      ),
+    /** HU-15: una página de favoritos (requiere sesión). */
+    favorites: (page: number, opts?: RequestOptions): Promise<FavoritesListResponse> =>
+      request(
+        `/api/v1/favorites?page=${page}`,
+        { method: 'GET' },
+        favoritesListResponseSchema,
         opts,
       ),
     /** HU-12: guarda la idea (idempotente); la copia la arma el backend. */
