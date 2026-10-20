@@ -3,6 +3,8 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '../../api/errors';
+import { fakeSession } from '../../test/supabaseMock';
+import { useAuthStore } from '../auth/authStore';
 import { usePhotoStore } from '../camera/photoStore';
 import { ResultPage } from './ResultPage';
 
@@ -149,6 +151,26 @@ describe('ResultPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
     expect(await screen.findByRole('heading', { name: whiteBin.binName })).toBeInTheDocument();
     expect(classify).toHaveBeenCalledTimes(2);
+  });
+
+  it('sin regla y con fallo al guardar con sesión: un solo «Reintentar» (el del aviso)', async () => {
+    useAuthStore.setState({ session: fakeSession(), ready: true });
+    try {
+      const classify = vi
+        .fn()
+        .mockResolvedValueOnce(response({}, null))
+        .mockResolvedValueOnce(response());
+      renderPage(classify);
+      expect(await screen.findByText('No pudimos guardar este escaneo')).toBeInTheDocument();
+      expect(screen.getAllByRole('button', { name: 'Reintentar' })).toHaveLength(1);
+      expect(screen.getByRole('button', { name: 'Tomar otra foto' })).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Reintentar' }));
+      expect(await screen.findByRole('heading', { name: whiteBin.binName })).toBeInTheDocument();
+      expect(classify).toHaveBeenCalledTimes(2);
+    } finally {
+      useAuthStore.setState({ session: null, ready: true });
+    }
   });
 
   it('NOT_A_WASTE: alerta «No parece un residuo» y Tomar otra foto', async () => {

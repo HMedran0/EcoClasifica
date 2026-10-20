@@ -29,7 +29,13 @@ export type ChatIdea = z.infer<typeof chatIdeaSchema>;
 
 export const chatRequestSchema = z.object({
   scanId: z.string().uuid().optional(),
-  ideaIndex: z.number().int().min(0).max(2),
+  // Opcional: un favorito no conoce el índice de su idea. Solo se usa en métricas.
+  ideaIndex: z.number().int().min(0).max(2).optional(),
+  /**
+   * HU-15: con sesión, la idea guardada y su hilo salen de la base (se ignoran `idea` y los
+   * mensajes anteriores del cliente; solo cuenta el último). Sin sesión se ignora.
+   */
+  ideaId: z.string().uuid().optional(),
   idea: chatIdeaSchema,
   // Se aceptan más de 10; el backend envía a la IA solo los últimos `MAX_CHAT_MESSAGES`.
   messages: z
@@ -47,3 +53,17 @@ export const chatResponseSchema = z.object({
   usage: z.object({ promptTokens: z.number(), completionTokens: z.number() }),
 });
 export type ChatResponse = z.infer<typeof chatResponseSchema>;
+
+/** GET /api/v1/chat/:ideaId/messages (HU-15). El hilo guardado: últimos 50, del más antiguo al más nuevo. */
+export const CHAT_HISTORY_LIMIT = 50;
+
+/** Sin tope de longitud: las respuestas guardadas de la IA pueden superar `CHAT_MESSAGE_MAX`. */
+export const storedChatMessageSchema = z.object({
+  role: z.enum(['user', 'assistant']),
+  content: z.string(),
+});
+
+export const chatHistoryResponseSchema = z.object({
+  items: z.array(storedChatMessageSchema).max(CHAT_HISTORY_LIMIT),
+});
+export type ChatHistoryResponse = z.infer<typeof chatHistoryResponseSchema>;

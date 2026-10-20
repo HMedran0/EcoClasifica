@@ -2,7 +2,7 @@ import type { ClassifyResponse } from '@ecoclasifica/shared';
 import { Navigate } from 'react-router';
 import { api } from '../../api/client';
 import { pendingActions, ScanScreen, TITLE, type ScanAction } from '../scan/ScanScreen';
-import { UnsavedNotice } from '../scan/UnsavedNotice';
+import { UnsavedNotice, useUnsavedKind } from '../scan/UnsavedNotice';
 import { useScan, type ScanRequest } from '../scan/useScan';
 import { BinCard } from './BinCard';
 import { capitalizeFirst, formatPercent, MATERIAL_LABELS } from './materialLabels';
@@ -15,11 +15,14 @@ interface ResultPageProps {
 /** HU-17: resultado del Modo Clasificar a partir de la foto de `photoStore`. */
 export function ResultPage({ classify = api.classify }: ResultPageProps) {
   const { photo, state, retry, backToCamera } = useScan('classify', classify);
+  // Si el aviso de guardado fallido ya ofrece «Reintentar», la acción no se repite.
+  const noticeRetries = useUnsavedKind(state) === 'failed';
   if (!photo) return <Navigate to="/camara" replace />;
 
   const view = state.kind === 'success' ? toResultView(state.data) : null;
   const actions =
-    pendingActions(state, retry, backToCamera) ?? successActions(view, retry, backToCamera);
+    pendingActions(state, retry, backToCamera) ??
+    successActions(view, noticeRetries ? null : retry, backToCamera);
 
   return (
     <ScanScreen
@@ -37,13 +40,14 @@ export function ResultPage({ classify = api.classify }: ResultPageProps) {
 
 function successActions(
   view: ResultView | null,
-  retry: () => void,
+  retry: (() => void) | null,
   backToCamera: () => void,
 ): ScanAction[] {
   if (view && isUnsure(view)) {
     return [{ label: 'Repetir foto', onClick: backToCamera, primary: true }];
   }
   if (view?.kind === 'noRule') {
+    if (!retry) return [{ label: 'Tomar otra foto', onClick: backToCamera, primary: true }];
     return [
       { label: 'Reintentar', onClick: retry, primary: true },
       { label: 'Tomar otra foto', onClick: backToCamera },

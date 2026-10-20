@@ -3,6 +3,7 @@ import { CameraPage } from '../features/camera/CameraPage';
 import { LoginPage } from '../features/auth/LoginPage';
 import { RequireAuth } from '../features/auth/RequireAuth';
 import { ChatPage } from '../features/chat/ChatPage';
+import { FavoritesPage } from '../features/favorites/FavoritesPage';
 import { ResultPage } from '../features/classify/ResultPage';
 import { HistoryDetailPage } from '../features/history/HistoryDetailPage';
 import { HistoryPage } from '../features/history/HistoryPage';
@@ -38,7 +39,14 @@ export function App() {
             </RequireAuth>
           }
         />
-        {/* HU-15: <Route path="/favoritos" element={<RequireAuth>…</RequireAuth>} /> */}
+        <Route
+          path="/favoritos"
+          element={
+            <RequireAuth>
+              <FavoritesPage />
+            </RequireAuth>
+          }
+        />
       </Routes>
       <UpdatePrompt />
     </BrowserRouter>

@@ -20,7 +20,7 @@ Estados: Pendiente · En curso · Hecha. Prioridad: M = MVP, D = deseable. Cada 
 | HU-12 | Guardar como favorita                                                                 | D    | F4   | Hecha     |
 | HU-13 | Ver mi historial                                                                      | M    | F4   | Hecha     |
 | HU-14 | Eliminar registros                                                                    | D    | F4   | Pendiente |
-| HU-15 | Ver mis favoritos                                                                     | M    | F4   | Pendiente |
+| HU-15 | Ver mis favoritos                                                                     | M    | F4   | Hecha     |
 | HU-16 | Estadísticas personales                                                               | D    | F4   | Pendiente |
 | HU-17 | Pantalla de resultado (UI de HU-05, HU-06 y HU-07)                                    | M    | F2   | Hecha     |
 | HU-18 | Botón «Instalar app» en la portada (`beforeinstallprompt`, solo si no está instalada) | D    | F3   | Hecha     |
@@ -40,7 +40,7 @@ Orden de F2: `chore/F2-base` ✅ (proyecto Vite + Tailwind, workspace) → despl
 
 Orden de F3: HU-09 (`POST /scan/upcycle` e ideas) ✅ → HU-03 (interruptor de modo) ✅ → HU-10 ✅ → HU-11 ✅ → mejora HU-18 ✅. **Criterio de salida cumplido (2026-10-19):** Flujo B completo con chat en Android real (frasco y botella con 3 ideas, cargador sin ideas → «Ver dónde depositarlo», idea → chat en pasos con hilo conservado), botón «Instalar app» verificado en escritorio, CI verde.
 
-Orden de F4: HU-04 ✅ → HU-13 ✅ → HU-12 (guardar favorita) ✅ → HU-15 (ver favoritos; necesita favoritos guardados) → HU-14 (eliminar; debe comprobar que los favoritos se conservan) → HU-16.
+Orden de F4: HU-04 ✅ → HU-13 ✅ → HU-12 (guardar favorita) ✅ → HU-15 (ver favoritos y chat persistente) ✅ → HU-14 (eliminar; debe comprobar que los favoritos se conservan) → HU-16.
 
 Después del MVP: empaquetado con Capacitor y publicación en Google Play.
 

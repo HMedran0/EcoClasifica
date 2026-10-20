@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import type { ScanDeps } from '../controllers/scan.controller';
 import type { AuthMiddlewares } from '../middlewares/auth';
+import type { ChatDeps } from '../services/chat.service';
 import type { FavoritesDeps } from '../services/favorites.service';
 import type { HistoryDeps } from '../services/history.service';
 import type { MeDeps } from '../services/me.service';
@@ -19,11 +20,12 @@ routes.use(healthRoutes);
 //   F1: scan.routes.ts      → POST /api/v1/scan/classify          (HU-05, HU-06, HU-07)
 //   F3: scan.routes.ts      → POST /api/v1/scan/upcycle           (HU-09)
 //       chat.routes.ts      → POST /api/v1/chat                   (HU-11)
+//                             GET /chat/:ideaId/messages          (HU-15)
 //   F4: me.routes.ts        → GET /api/v1/me                      (HU-04)
 //       history.routes.ts   → GET /api/v1/history, /history/:id   (HU-13)
 //       favorites.routes.ts → GET/POST /favorites, DELETE /:id    (HU-12; pantalla en HU-15)
 export function createV1Routes(
-  deps: ScanDeps & MeDeps & HistoryDeps & FavoritesDeps,
+  deps: ScanDeps & ChatDeps & MeDeps & HistoryDeps & FavoritesDeps,
   auth: AuthMiddlewares,
 ) {
   const v1 = Router();

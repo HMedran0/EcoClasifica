@@ -12,7 +12,7 @@ vi.mock('../../api/client', () => ({
 }));
 
 describe('HomePage', () => {
-  it('con sesión enlaza a «Mi historial»; sin sesión no', () => {
+  it('con sesión enlaza a «Mi historial» y «Mis favoritos»; sin sesión no', () => {
     useAuthStore.setState({ session: null, ready: true });
     const { unmount } = render(
       <MemoryRouter>
@@ -20,6 +20,7 @@ describe('HomePage', () => {
       </MemoryRouter>,
     );
     expect(screen.queryByRole('link', { name: 'Mi historial' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Mis favoritos' })).not.toBeInTheDocument();
     unmount();
 
     useAuthStore.setState({ session: fakeSession(), ready: true });
@@ -31,6 +32,10 @@ describe('HomePage', () => {
     expect(screen.getByRole('link', { name: 'Mi historial' })).toHaveAttribute(
       'href',
       '/historial',
+    );
+    expect(screen.getByRole('link', { name: 'Mis favoritos' })).toHaveAttribute(
+      'href',
+      '/favoritos',
     );
     useAuthStore.setState({ session: null, ready: true });
   });

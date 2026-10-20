@@ -173,5 +173,12 @@ function chatState(
   if (!result.canUpcycle) return null;
   const idea = result.ideas.find((i) => i.ideaIndex === ideaIndex);
   if (!idea) return null;
-  return { ideaIndex, saved: { scanId: detail.id, idea: toChatIdea(result.objectName, idea) } };
+  return {
+    ideaIndex,
+    saved: {
+      scanId: detail.id,
+      ...(idea.ideaId ? { ideaId: idea.ideaId } : {}),
+      idea: toChatIdea(result.objectName, idea),
+    },
+  };
 }
