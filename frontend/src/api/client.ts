@@ -4,6 +4,8 @@ import {
   type ChatResponse,
   type chatRequestSchema,
   errorBodySchema,
+  favoriteSchema,
+  type Favorite,
   healthResponseSchema,
   historyDetailSchema,
   historyListResponseSchema,
@@ -15,7 +17,7 @@ import {
   type UpcycleResponse,
   upcycleResponseSchema,
 } from '@ecoclasifica/shared';
-import type { z, ZodType } from 'zod';
+import { z, type ZodType } from 'zod';
 import { getAccessToken, renewOrClearSession } from '../features/auth/authStore';
 import { ApiError, isBackendErrorCode } from './errors';
 
@@ -118,17 +120,29 @@ export function createApiClient({
         historyDetailSchema,
         opts,
       ),
+    /** HU-12: guarda la idea (idempotente); la copia la arma el backend. */
+    addFavorite: (ideaId: string, opts?: RequestOptions): Promise<Favorite> =>
+      request('/api/v1/favorites', { method: 'POST', body: { ideaId } }, favoriteSchema, opts),
+    /** HU-12: quita una favorita propia (204 sin cuerpo). */
+    removeFavorite: async (favoriteId: string, opts?: RequestOptions): Promise<void> => {
+      await request(
+        `/api/v1/favorites/${encodeURIComponent(favoriteId)}`,
+        { method: 'DELETE' },
+        z.unknown(),
+        opts,
+      );
+    },
     /** Indicador de conexión de la pantalla inicial (prueba de humo de CORS en producción). */
     health: (opts?: RequestOptions): Promise<HealthResponse> =>
       request('/api/health', { method: 'GET' }, healthResponseSchema, opts),
   };
 }
 
-type SendInit = { method: 'GET' } | { method: 'POST'; body: unknown };
+type SendInit = { method: 'GET' } | { method: 'DELETE' } | { method: 'POST'; body: unknown };
 
 /** Un GET sin cuerpo ni `Content-Type` es una solicitud «simple»: no provoca preflight CORS. */
 function toFetchInit(init: SendInit): RequestInit {
-  if (init.method === 'GET') return { method: 'GET' };
+  if (init.method !== 'POST') return { method: init.method };
   return {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

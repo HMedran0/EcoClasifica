@@ -25,7 +25,7 @@ Sin token, los endpoints de escaneo funcionan pero no guardan nada (`saved: fals
 ### Autenticación (HU-04)
 
 - `optionalAuth` (`/scan/*`, `/chat`): sin cabecera `Authorization` → anónimo; con cabecera y token inválido, vencido o mal formado → `401 UNAUTHORIZED`. Con sesión, `/scan/*` guarda el escaneo (HU-13); `/chat` aún no guarda nada.
-- `requireAuth` (`/me`, historial, favoritos): sin token o inválido → `401 UNAUTHORIZED`.
+- `requireAuth` (`/me`, historial, favoritos): sin cabecera `Authorization` → `401 UNAUTHORIZED` «Inicia sesión para continuar»; token inválido, vencido o mal formado → `401` «Tu sesión no es válida o venció».
 - El token se valida con `supabase.auth.getClaims(token)`: con claves de firma asimétricas verifica en local contra el JWKS (en caché); con el secreto simétrico (HS256) recurre a `getUser()` (una llamada a Supabase Auth). Rechaza tokens vencidos.
 - Con «Confirm email» activo, Supabase no emite sesión a correos sin verificar.
 - Los logs ocultan `authorization` y `cookie` (`redact` de pino).
@@ -183,6 +183,28 @@ Requiere sesión. `?page=N` (entero de 1 a 1000, por defecto 1; fuera de ese ran
 Requiere sesión. Respuesta 200 (`historyDetailSchema`): `{ id, createdAt, imageUrl, mode, result, disposal? }`, con la misma forma de `result` y `disposal` que la respuesta original. `imageUrl` es una URL firmada de 10 min, o `null`.
 
 - **Aislamiento:** el backend usa la service role (salta RLS), así que la consulta filtra por `user_id = req.user.id` y por `id`. Un escaneo de otro usuario responde `404 NOT_FOUND` (no 403, para no revelar que existe). Un id mal formado también responde 404, sin consultar la base.
+- **Favoritos (HU-12):** en `mode: 'upcycle'` con ideas, cada idea con `ideaId` trae `favoriteId`: el id del favorito del propio usuario, o `null`. Es el único endpoint que lo incluye.
+
+## Favoritos (HU-12)
+
+Todos con `requireAuth` y filtrados por `user_id = req.user.id`. El favorito es una copia (snapshot) de la idea: borrar el escaneo no lo borra (`ideaId` pasa a `null`).
+
+Favorito (`favoriteSchema`): `{ id, ideaId, objectName, difficulty, title, description, extraMaterials, createdAt }`.
+
+### POST /favorites
+
+Solicitud (`createFavoriteSchema`): `{ "ideaId": "uuid" }`. Cualquier otro campo se descarta: el backend arma la copia desde la base (`objectName` y `difficulty` de `scans`; `title`, `description` y `extraMaterials` de `scan_ideas`), leyendo la idea con un join que exige `scans.user_id = req.user.id`.
+
+- `201` con el favorito nuevo; `200` con el existente si la idea ya era favorita (idempotente, también si dos peticiones llegan a la vez: `unique (user_id, idea_id)`).
+- Idea de otro usuario o inexistente → `404 NOT_FOUND`. `ideaId` mal formado → `400 VALIDATION_ERROR`.
+
+### DELETE /favorites/:id
+
+`204` sin cuerpo. Uno de otro usuario, inexistente o con id mal formado → `404 NOT_FOUND`.
+
+### GET /favorites?page=N
+
+Respuesta 200 (`favoritesListResponseSchema`): `{ items: Favorite[], page, pageSize: 20, hasMore }`, más recientes primero (desempate por `id`). La pantalla llega en HU-15.
 
 ## POST /chat
 

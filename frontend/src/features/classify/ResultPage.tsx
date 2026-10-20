@@ -2,6 +2,7 @@ import type { ClassifyResponse } from '@ecoclasifica/shared';
 import { Navigate } from 'react-router';
 import { api } from '../../api/client';
 import { pendingActions, ScanScreen, TITLE, type ScanAction } from '../scan/ScanScreen';
+import { UnsavedNotice } from '../scan/UnsavedNotice';
 import { useScan, type ScanRequest } from '../scan/useScan';
 import { BinCard } from './BinCard';
 import { capitalizeFirst, formatPercent, MATERIAL_LABELS } from './materialLabels';
@@ -29,6 +30,7 @@ export function ResultPage({ classify = api.classify }: ResultPageProps) {
       actions={actions}
     >
       {state.kind === 'success' && view && <ClassifyResult data={state.data} view={view} />}
+      <UnsavedNotice state={state} onRetry={retry} />
     </ScanScreen>
   );
 }

@@ -1,8 +1,11 @@
 import { Router } from 'express';
 import type { ScanDeps } from '../controllers/scan.controller';
 import type { AuthMiddlewares } from '../middlewares/auth';
+import type { FavoritesDeps } from '../services/favorites.service';
+import type { HistoryDeps } from '../services/history.service';
 import type { MeDeps } from '../services/me.service';
 import { createChatRoutes } from './chat.routes';
+import { createFavoritesRoutes } from './favorites.routes';
 import { healthRoutes } from './health.routes';
 import { createHistoryRoutes } from './history.routes';
 import { createMeRoutes } from './me.routes';
@@ -18,12 +21,16 @@ routes.use(healthRoutes);
 //       chat.routes.ts      → POST /api/v1/chat                   (HU-11)
 //   F4: me.routes.ts        → GET /api/v1/me                      (HU-04)
 //       history.routes.ts   → GET /api/v1/history, /history/:id   (HU-13)
-//       favorites.routes.ts                                       (HU-12, HU-14 a HU-16)
-export function createV1Routes(deps: ScanDeps & MeDeps, auth: AuthMiddlewares) {
+//       favorites.routes.ts → GET/POST /favorites, DELETE /:id    (HU-12; pantalla en HU-15)
+export function createV1Routes(
+  deps: ScanDeps & MeDeps & HistoryDeps & FavoritesDeps,
+  auth: AuthMiddlewares,
+) {
   const v1 = Router();
   v1.use(createScanRoutes(deps, auth));
   v1.use(createChatRoutes(deps, auth));
   v1.use(createMeRoutes(deps, auth));
   v1.use(createHistoryRoutes(deps, auth));
+  v1.use(createFavoritesRoutes(deps, auth));
   return v1;
 }

@@ -1,4 +1,4 @@
-import type { RequestHandler } from 'express';
+import type { Request, RequestHandler } from 'express';
 import type { AuthUser, TokenVerifier } from '../services/auth.service';
 import { AppError } from '../utils/appError';
 
@@ -14,7 +14,10 @@ declare global {
 
 const BEARER = /^Bearer ([^\s]+)$/i;
 
-const unauthorized = () => new AppError('UNAUTHORIZED', 'Tu sesión no es válida o venció');
+const LOGIN_REQUIRED = 'Inicia sesión para continuar';
+const SESSION_INVALID = 'Tu sesión no es válida o venció';
+
+const unauthorized = (message: string) => new AppError('UNAUTHORIZED', message);
 
 /** `undefined` si no hay cabecera; `null` si la hay pero no es `Bearer <token>`. */
 function readBearer(header: string | undefined): string | null | undefined {
@@ -24,7 +27,8 @@ function readBearer(header: string | undefined): string | null | undefined {
 
 /**
  * `optionalAuth`: sin cabecera → anónimo; cabecera inválida → 401.
- * `requireAuth`: sin sesión válida → 401. Ambos fijan `req.user`.
+ * `requireAuth`: sin cabecera → 401 «Inicia sesión»; token inválido o vencido → 401 «sesión no
+ * válida». Ambos fijan `req.user`.
  */
 export function createAuthMiddlewares(verifier: TokenVerifier) {
   const authenticate =
@@ -33,9 +37,10 @@ export function createAuthMiddlewares(verifier: TokenVerifier) {
       try {
         const token = readBearer(req.headers.authorization);
         if (token === undefined && !required) return next();
-        if (!token) throw unauthorized();
+        if (token === undefined) throw unauthorized(LOGIN_REQUIRED);
+        if (!token) throw unauthorized(SESSION_INVALID);
         const user = await verifier.verify(token);
-        if (!user) throw unauthorized();
+        if (!user) throw unauthorized(SESSION_INVALID);
         req.user = user;
         next();
       } catch (err) {
@@ -44,6 +49,12 @@ export function createAuthMiddlewares(verifier: TokenVerifier) {
     };
 
   return { optionalAuth: authenticate(false), requireAuth: authenticate(true) };
+}
+
+/** Usuario de una ruta con `requireAuth`; la comprobación evita usar `!`. */
+export function currentUser(req: Request): AuthUser {
+  if (!req.user) throw unauthorized(LOGIN_REQUIRED);
+  return req.user;
 }
 
 export type AuthMiddlewares = ReturnType<typeof createAuthMiddlewares>;

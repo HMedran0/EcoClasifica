@@ -7,12 +7,14 @@ import {
   type SavedScanResult,
 } from '@ecoclasifica/shared';
 import type { Logger } from 'pino';
+import type { FavoritesRepo } from '../repositories/favorites.repo';
 import type { ListedScan, ScanRecord, ScansRepo } from '../repositories/scans.repo';
 import { AppError } from '../utils/appError';
 import type { AuthUser } from './auth.service';
 
 export interface HistoryDeps {
   scans: ScansRepo;
+  favorites: FavoritesRepo;
 }
 
 /** Una página de 20, más recientes primero. Se pide uno de más para saber si hay otra página. */
@@ -48,7 +50,7 @@ function validRows(rows: ListedScan[], log: Logger): ScanRecord[] {
 
 /** El id de otro usuario o mal formado responde 404 (no 403): no se revela si existe. */
 export async function getHistoryItem(
-  { scans }: HistoryDeps,
+  { scans, favorites }: HistoryDeps,
   user: AuthUser,
   scanId: string,
   log: Logger,
@@ -56,8 +58,26 @@ export async function getHistoryItem(
   const id = historyIdSchema.safeParse(scanId);
   const row = id.success ? await scans.findById(user.id, id.data) : null;
   if (!row) throw new AppError('NOT_FOUND', 'No encontramos ese escaneo en tu historial');
-  const [imageUrl = null] = await signOrNull(scans, [row], log);
-  return { ...row.saved, id: row.id, createdAt: row.createdAt, imageUrl };
+  const [[imageUrl = null], saved] = await Promise.all([
+    signOrNull(scans, [row], log),
+    withFavoriteIds(favorites, user.id, row.saved),
+  ]);
+  return { ...saved, id: row.id, createdAt: row.createdAt, imageUrl };
+}
+
+/** Marca cada idea guardada con su `favoriteId` (o `null`) para pintar el corazón (HU-12). */
+async function withFavoriteIds(
+  favorites: FavoritesRepo,
+  userId: string,
+  saved: SavedScanResult,
+): Promise<SavedScanResult> {
+  if (saved.mode !== 'upcycle' || !saved.result.canUpcycle) return saved;
+  const ideaIds = saved.result.ideas.flatMap((idea) => (idea.ideaId ? [idea.ideaId] : []));
+  const byIdea = await favorites.idsByIdeas(userId, ideaIds);
+  const ideas = saved.result.ideas.map((idea) =>
+    idea.ideaId ? { ...idea, favoriteId: byIdea.get(idea.ideaId) ?? null } : idea,
+  );
+  return { ...saved, result: { ...saved.result, ideas } };
 }
 
 /** Sin firma la lista sigue siendo útil: las imágenes quedan en `null` y se registra el motivo. */

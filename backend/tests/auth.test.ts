@@ -67,9 +67,15 @@ beforeEach(() => {
   });
 });
 
-const expectUnauthorized = (res: request.Response) => {
+const SESSION_INVALID = 'Tu sesión no es válida o venció';
+const LOGIN_REQUIRED = 'Inicia sesión para continuar';
+
+/** Por defecto, el mensaje de un token inválido o vencido. */
+const expectUnauthorized = (res: request.Response, message = SESSION_INVALID) => {
   expect(res.status).toBe(401);
-  expect(errorBodySchema.parse(res.body).error.code).toBe('UNAUTHORIZED');
+  const { error } = errorBodySchema.parse(res.body);
+  expect(error.code).toBe('UNAUTHORIZED');
+  expect(error.message).toBe(message);
 };
 
 describe('optionalAuth (POST /api/v1/chat)', () => {
@@ -132,8 +138,15 @@ describe('optionalAuth (POST /api/v1/chat)', () => {
 });
 
 describe('GET /api/v1/me (requireAuth)', () => {
-  it('sin token responde 401', async () => {
-    expectUnauthorized(await request(appWith()).get('/api/v1/me'));
+  it('sin cabecera responde 401 pidiendo iniciar sesión', async () => {
+    expectUnauthorized(await request(appWith()).get('/api/v1/me'), LOGIN_REQUIRED);
+    expect(getClaims).not.toHaveBeenCalled();
+  });
+
+  it('con cabecera mal formada responde 401 de sesión no válida', async () => {
+    expectUnauthorized(
+      await request(appWith()).get('/api/v1/me').set({ Authorization: 'Basic x' }),
+    );
   });
 
   it('con token inválido responde 401', async () => {

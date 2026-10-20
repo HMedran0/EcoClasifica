@@ -11,6 +11,7 @@ import { createApp } from '../src/app';
 import { summarize } from '../src/services/history.service';
 import { createLogger } from '../src/utils/logger';
 import { fakeDisposalRepo } from './helpers/disposalRules';
+import { memoryFavoritesRepo } from './helpers/favoritesRepo';
 import {
   bearer,
   fakeVerifier,
@@ -29,6 +30,7 @@ const appWith = (scansRepo: ReturnType<typeof memoryScansRepo>) =>
     aiProvider: { classify: vi.fn(), upcycle: vi.fn(), chat: vi.fn() },
     tokenVerifier: fakeVerifier,
     scansRepo,
+    favoritesRepo: memoryFavoritesRepo(),
   });
 
 /** `n` escaneos de un usuario, uno por minuto (el último es el más reciente). */
@@ -173,6 +175,7 @@ describe('filas con resultado inválido', () => {
       aiProvider: { classify: vi.fn(), upcycle: vi.fn(), chat: vi.fn() },
       tokenVerifier: fakeVerifier,
       scansRepo: memoryScansRepo(rows()),
+      favoritesRepo: memoryFavoritesRepo(),
       logger: createLogger('info', sink),
     });
 

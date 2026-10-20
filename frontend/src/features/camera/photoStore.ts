@@ -11,8 +11,13 @@ export interface ScanResponses {
   upcycle: UpcycleResponse;
 }
 
-/** Última respuesta de cada modo y la foto a la que corresponde (evita repetir la llamada a la IA). */
-export type ScanResults = { [M in ScanMode]?: { photoId: number; data: ScanResponses[M] } };
+/**
+ * Última respuesta de cada modo y la foto a la que corresponde (evita repetir la llamada a la IA).
+ * `withSession`: si la petición salió con sesión (distingue «hecho sin sesión» de «falló al guardar»).
+ */
+export type ScanResults = {
+  [M in ScanMode]?: { photoId: number; data: ScanResponses[M]; withSession?: boolean };
+};
 
 /**
  * Hilos del chat en memoria. Los de la foto actual van por `ideaIndex` de su última respuesta de
@@ -26,7 +31,12 @@ interface PhotoState {
   chats: ChatThreads;
   setPhoto: (photo: CompressedPhoto) => void;
   clear: () => void;
-  saveResult: <M extends ScanMode>(mode: M, photoId: number, data: ScanResponses[M]) => void;
+  saveResult: <M extends ScanMode>(
+    mode: M,
+    photoId: number,
+    data: ScanResponses[M],
+    withSession?: boolean,
+  ) => void;
   saveChat: (threadKey: string, messages: ChatMessage[]) => void;
 }
 
@@ -47,9 +57,9 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
     set({ photo: null, results: {}, chats: {} });
   },
   // Ideas nuevas (p. ej. tras «Reintentar») invalidan los hilos de las anteriores.
-  saveResult: (mode, photoId, data) =>
+  saveResult: (mode, photoId, data, withSession = false) =>
     set((state) => ({
-      results: { ...state.results, [mode]: { photoId, data } },
+      results: { ...state.results, [mode]: { photoId, data, withSession } },
       ...(mode === 'upcycle' ? { chats: historyThreads(state.chats) } : {}),
     })),
   saveChat: (threadKey, messages) =>
