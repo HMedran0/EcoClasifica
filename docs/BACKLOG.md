@@ -23,6 +23,7 @@ Estados: Pendiente · En curso · Hecha. Prioridad: M = MVP, D = deseable. Cada 
 | HU-15 | Ver mis favoritos                                        | M    | F4   | Pendiente |
 | HU-16 | Estadísticas personales                                  | D    | F4   | Pendiente |
 | HU-17 | Pantalla de resultado (UI de HU-05, HU-06 y HU-07)       | M    | F2   | Hecha     |
+| HU-18 | Botón «Instalar app» en la portada (`beforeinstallprompt`, solo si no está instalada) | D    | F3   | Pendiente |
 
 ## Fases y criterios de salida
 
@@ -34,7 +35,9 @@ Estados: Pendiente · En curso · Hecha. Prioridad: M = MVP, D = deseable. Cada 
 | F3 Upcycle  | `POST /scan/upcycle`, ideas, chat paso a paso                                   | Flujo B completo con chat                                        |
 | F4 Cuentas  | Auth (correo verificado y Google), historial, favoritos, RLS, pruebas de acceso | Lighthouse ≥ 90 (Performance y PWA) y RLS probado entre usuarios |
 
-Orden de F2: `chore/F2-base` ✅ (proyecto Vite + Tailwind, workspace) → despliegue ✅ (Vercel + CORS con Railway, `chore/F2-despliegue`) → HU-02 ✅ → HU-17 ✅ → `fix/clasificacion-casos-reales` ✅ (prueba en Android real) → HU-01 ✅.
+Orden de F2: `chore/F2-base` ✅ (proyecto Vite + Tailwind, workspace) → despliegue ✅ (Vercel + CORS con Railway, `chore/F2-despliegue`) → HU-02 ✅ → HU-17 ✅ → `fix/clasificacion-casos-reales` ✅ (prueba en Android real) → HU-01 ✅. **Criterio de salida cumplido (2026-10-19):** Flujo A completo en Android real (7 objetos, 2–3 s, instalación, modo avión, TalkBack, CI verde).
+
+Orden de F3: HU-09 (`POST /scan/upcycle` e ideas) → HU-03 (interruptor de modo) → HU-10 → HU-11 → mejora HU-18.
 
 Después del MVP: empaquetado con Capacitor y publicación en Google Play.
 
