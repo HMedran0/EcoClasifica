@@ -47,7 +47,7 @@ export async function upcycleScan(
     throw new AppError('NOT_A_WASTE', 'No encontramos un residuo en la foto, intenta con otra');
   }
   return {
-    // scanId/saved: guardado con sesión (HU-04).
+    // scanId/saved: los completa `saveScan` si hay sesión (HU-13).
     response: { scanId: null, mode: 'upcycle', result: toResult(data, log), saved: false },
     usage,
     latencyMs,

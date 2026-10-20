@@ -44,4 +44,16 @@ describe('photoStore', () => {
     clear();
     expect(usePhotoStore.getState()).toMatchObject({ photo: null, results: {} });
   });
+
+  it('ideas nuevas borran los hilos de la foto pero no los del historial (HU-13)', () => {
+    const thread = [{ role: 'user' as const, content: 'Hola' }];
+    const { setPhoto, saveResult, saveChat } = usePhotoStore.getState();
+    setPhoto(compressed);
+    saveChat('0', thread);
+    saveChat('historial:abc:1', thread);
+
+    saveResult('upcycle', usePhotoStore.getState().photo!.id, saved);
+
+    expect(usePhotoStore.getState().chats).toEqual({ 'historial:abc:1': thread });
+  });
 });

@@ -18,7 +18,7 @@ Estados: Pendiente · En curso · Hecha. Prioridad: M = MVP, D = deseable. Cada 
 | HU-10 | Elegir una alternativa                                                                | M    | F3   | Hecha     |
 | HU-11 | Chat paso a paso                                                                      | M    | F3   | Hecha     |
 | HU-12 | Guardar como favorita                                                                 | D    | F4   | Pendiente |
-| HU-13 | Ver mi historial                                                                      | M    | F4   | Pendiente |
+| HU-13 | Ver mi historial                                                                      | M    | F4   | Hecha     |
 | HU-14 | Eliminar registros                                                                    | D    | F4   | Pendiente |
 | HU-15 | Ver mis favoritos                                                                     | M    | F4   | Pendiente |
 | HU-16 | Estadísticas personales                                                               | D    | F4   | Pendiente |

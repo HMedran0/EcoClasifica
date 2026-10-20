@@ -3,6 +3,8 @@ import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 import { listenForInstallPrompt } from '../../pwa/installPrompt';
 import { setOnline } from '../../test/network';
+import { fakeSession } from '../../test/supabaseMock';
+import { useAuthStore } from '../auth/authStore';
 import { HomePage } from './HomePage';
 
 vi.mock('../../api/client', () => ({
@@ -10,6 +12,29 @@ vi.mock('../../api/client', () => ({
 }));
 
 describe('HomePage', () => {
+  it('con sesión enlaza a «Mi historial»; sin sesión no', () => {
+    useAuthStore.setState({ session: null, ready: true });
+    const { unmount } = render(
+      <MemoryRouter>
+        <HomePage />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByRole('link', { name: 'Mi historial' })).not.toBeInTheDocument();
+    unmount();
+
+    useAuthStore.setState({ session: fakeSession(), ready: true });
+    render(
+      <MemoryRouter>
+        <HomePage />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('link', { name: 'Mi historial' })).toHaveAttribute(
+      'href',
+      '/historial',
+    );
+    useAuthStore.setState({ session: null, ready: true });
+  });
+
   it('muestra el logo y el nombre con Eco y Clasifica separados por color', () => {
     const { container } = render(
       <MemoryRouter>

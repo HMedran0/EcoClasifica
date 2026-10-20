@@ -20,11 +20,11 @@ Base: `/api/v1` (salud en `/api/health`). JSON siempre. Auth: `Authorization: Be
 
 Respuesta de `/api/health` (`healthResponseSchema`): `{ status: 'ok', service: 'ecoclasifica-api', time: <ISO 8601> }`. La pantalla inicial la usa como indicador de conexión (prueba de humo de CORS).
 
-Sin token, los endpoints de escaneo funcionan pero no guardan nada (`saved: false`).
+Sin token, los endpoints de escaneo funcionan pero no guardan nada (`saved: false`). Con sesión se guardan en el historial (ver «Guardado en el historial»).
 
 ### Autenticación (HU-04)
 
-- `optionalAuth` (`/scan/*`, `/chat`): sin cabecera `Authorization` → anónimo; con cabecera y token inválido, vencido o mal formado → `401 UNAUTHORIZED`. Por ahora no se guarda nada aunque haya sesión (guardar: HU-13).
+- `optionalAuth` (`/scan/*`, `/chat`): sin cabecera `Authorization` → anónimo; con cabecera y token inválido, vencido o mal formado → `401 UNAUTHORIZED`. Con sesión, `/scan/*` guarda el escaneo (HU-13); `/chat` aún no guarda nada.
 - `requireAuth` (`/me`, historial, favoritos): sin token o inválido → `401 UNAUTHORIZED`.
 - El token se valida con `supabase.auth.getClaims(token)`: con claves de firma asimétricas verifica en local contra el JWKS (en caché); con el secreto simétrico (HS256) recurre a `getUser()` (una llamada a Supabase Auth). Rechaza tokens vencidos.
 - Con «Confirm email» activo, Supabase no emite sesión a correos sin verificar.
@@ -95,6 +95,7 @@ Solicitud igual a classify. Respuesta 200:
     "ideas": [
       {
         "ideaIndex": 0,
+        "ideaId": "uuid (solo si se guardó)",
         "title": "Portalápices decorado",
         "description": "Forra el frasco con cuerda y píntalo.",
         "extraMaterials": ["Cuerda de yute", "Pegamento"]
@@ -138,7 +139,50 @@ Solicitud igual a classify. Respuesta 200:
 - Recortes en palabra completa con «…»: `title` ≤ 60, `description` ≤ 120, `reason` ≤ 160 caracteres. `extraMaterials` ≤ 5.
 - `difficulty` se normaliza sin distinguir mayúsculas ni tildes («facil», «FÁCIL» → «Fácil»; «Media» → «Medio»).
 - Sin residuo → `422 NOT_A_WASTE` (aunque la IA diga `can_upcycle: true`). Misma validación de imagen, límite de peticiones y errores que classify.
-- `scanId` es `null` y `saved` es `false` hasta el guardado con sesión (HU-04).
+- Sin sesión, `scanId` es `null`, `saved` es `false` y las ideas no traen `ideaId`.
+
+## Guardado en el historial (HU-13)
+
+Con sesión, `POST /scan/classify` y `POST /scan/upcycle` guardan el escaneo después de obtener el resultado:
+
+- Imagen comprimida en el bucket privado `scan-images`, ruta `<user_id>/<scan_id>.jpg`.
+- Fila en `scans` con `user_id = req.user.id` y `result` (jsonb): copia de lo que vio el usuario. En clasificar es `{ mode, result, disposal }`; en upcycle es `{ mode, result }`, con `canUpcycle` y `reason` o las ideas (con su `ideaId`). El detalle se muestra desde esta copia, sin llamar a la IA, aunque después cambien las reglas.
+- Si hay ideas, 3 filas en `scan_ideas`. Sus ids los genera el backend y llegan en la respuesta como `ideaId`, que usarán favoritos y chat.
+- La respuesta lleva `scanId` y `saved: true`.
+- `NOT_A_WASTE` y los errores no se guardan. Si falla el guardado (Storage o Postgres), se deshace lo que alcanzó a escribirse, el usuario recibe su resultado con `scanId: null` y `saved: false`, y se registra un `error` con el modo y el motivo, sin imagen, Base64 ni datos personales.
+
+## GET /history
+
+Requiere sesión. `?page=N` (entero de 1 a 1000, por defecto 1; fuera de ese rango → `400 VALIDATION_ERROR`). Devuelve 20 por página, ordenados por `created_at desc, id desc`; con ese desempate el orden es estable aunque dos escaneos tengan la misma hora. Respuesta 200 (`historyListResponseSchema`):
+
+```json
+{
+  "items": [
+    {
+      "id": "uuid",
+      "createdAt": "2026-10-20T17:30:00.123+00:00",
+      "mode": "classify",
+      "objectName": "Botella de agua",
+      "summary": "Contenedor blanco (aprovechables)",
+      "thumbnailUrl": "https://…/storage/v1/object/sign/scan-images/…?token=…"
+    }
+  ],
+  "page": 1,
+  "pageSize": 20,
+  "hasMore": true
+}
+```
+
+- `summary`: el nombre del contenedor (o «Revisa el material» si la certeza fue baja y no se afirmó contenedor), «3 ideas» o «No reutilizable».
+- `thumbnailUrl`: URL firmada de 10 min, generada en lote con `createSignedUrls`. Es `null` si no hay imagen o si falla la firma; en ese caso la lista responde igual y se registra un error.
+- Una página sin escaneos responde `items: []` y `hasMore: false`.
+- Una fila cuyo `result` no cumple el esquema se omite: se registra un `warn` solo con su id (`scanId`) y se devuelven las demás. Por eso una página puede traer menos de 20. En `GET /history/:id`, esa fila responde `500 INTERNAL_ERROR`.
+
+## GET /history/:id
+
+Requiere sesión. Respuesta 200 (`historyDetailSchema`): `{ id, createdAt, imageUrl, mode, result, disposal? }`, con la misma forma de `result` y `disposal` que la respuesta original. `imageUrl` es una URL firmada de 10 min, o `null`.
+
+- **Aislamiento:** el backend usa la service role (salta RLS), así que la consulta filtra por `user_id = req.user.id` y por `id`. Un escaneo de otro usuario responde `404 NOT_FOUND` (no 403, para no revelar que existe). Un id mal formado también responde 404, sin consultar la base.
 
 ## POST /chat
 

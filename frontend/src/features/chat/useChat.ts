@@ -38,6 +38,8 @@ interface UseChatOptions {
   ideaIndex: number;
   idea: ChatIdea;
   scanId: string | null;
+  /** Hilo en `photoStore` (el índice de la idea, o uno propio para las del historial). */
+  threadKey: string;
   request: ChatRequest;
 }
 
@@ -45,8 +47,8 @@ interface UseChatOptions {
  * HU-11: hilo del chat de una idea. Vive en `photoStore` (en memoria), así que se conserva al
  * volver a /ideas y se borra al cambiar de foto. Solo viajan los últimos 10 mensajes.
  */
-export function useChat({ ideaIndex, idea, scanId, request }: UseChatOptions) {
-  const messages = usePhotoStore((s) => s.chats[ideaIndex] ?? EMPTY);
+export function useChat({ ideaIndex, idea, scanId, threadKey, request }: UseChatOptions) {
+  const messages = usePhotoStore((s) => s.chats[threadKey] ?? EMPTY);
   const saveChat = usePhotoStore((s) => s.saveChat);
   // Si se salió de la pantalla antes de la respuesta, el hilo termina en una pregunta sin responder.
   const [status, setStatus] = useState<ChatStatus>(() =>
@@ -72,7 +74,7 @@ export function useChat({ ideaIndex, idea, scanId, request }: UseChatOptions) {
     request(body, { signal: controller.signal }).then(
       ({ reply }) => {
         if (controller.signal.aborted) return;
-        saveChat(ideaIndex, [...thread, { role: 'assistant', content: reply }]);
+        saveChat(threadKey, [...thread, { role: 'assistant', content: reply }]);
         setLastReply((prev) => ({ id: prev.id + 1, text: reply }));
         setStatus({ kind: 'idle' });
       },
@@ -88,7 +90,7 @@ export function useChat({ ideaIndex, idea, scanId, request }: UseChatOptions) {
     const content = text.trim();
     if (!content || status.kind === 'sending') return;
     const thread: ChatMessage[] = [...messages, { role: 'user', content }];
-    saveChat(ideaIndex, thread);
+    saveChat(threadKey, thread);
     ask(thread);
   }
 

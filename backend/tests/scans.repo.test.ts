@@ -1,0 +1,240 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { describe, expect, it } from 'vitest';
+import {
+  createSupabaseScansRepo,
+  SCAN_IMAGES_BUCKET,
+  SIGNED_URL_TTL_SECONDS,
+  type NewScan,
+} from '../src/repositories/scans.repo';
+import { classifySaved, USER_A } from './helpers/scansRepo';
+
+type Call = [method: string, ...args: unknown[]];
+type Result = { data?: unknown; error: { message: string } | null };
+
+/**
+ * Cliente de Supabase simulado: registra cada consulta como la cadena de métodos que la arma
+ * (`from`, `select`, `eq`, …) y resuelve con el resultado configurado para esa tabla u operación.
+ */
+function fakeSupabase(results: Partial<Record<string, Result>> = {}) {
+  const queries: Call[][] = [];
+  const storage: Call[] = [];
+
+  function query(table: string) {
+    const calls: Call[] = [['from', table]];
+    queries.push(calls);
+    const key = () => `${table}.${calls[1]?.[0] ?? 'select'}`;
+    const builder: Record<string, unknown> = {
+      then: (resolve: (r: Result) => void) => resolve(results[key()] ?? { data: [], error: null }),
+    };
+    for (const method of ['select', 'insert', 'delete', 'eq', 'order', 'range', 'maybeSingle']) {
+      builder[method] = (...args: unknown[]) => {
+        calls.push([method, ...args]);
+        return builder;
+      };
+    }
+    return builder;
+  }
+
+  const bucketApi = (bucket: string) => {
+    const record =
+      (method: string) =>
+      async (...args: unknown[]) => {
+        storage.push([method, bucket, ...args]);
+        return results[`storage.${method}`] ?? { data: [], error: null };
+      };
+    return {
+      upload: record('upload'),
+      remove: record('remove'),
+      createSignedUrls: record('createSignedUrls'),
+    };
+  };
+
+  const client = { from: query, storage: { from: bucketApi } } as unknown as SupabaseClient;
+  return { client: () => client, queries, storage };
+}
+
+const SCAN_ID = '0e7c3b1a-2f4d-4c6e-9a8b-1d2e3f4a5b6c';
+
+const newScan = (overrides: Partial<NewScan> = {}): NewScan => ({
+  id: SCAN_ID,
+  userId: USER_A,
+  objectName: 'Botella',
+  materialCode: 'plastico',
+  materialDetail: 'PET',
+  confidence: 0.9,
+  difficulty: null,
+  saved: classifySaved,
+  ideas: [],
+  image: { bytes: Buffer.from('jpeg'), mimeType: 'image/jpeg' },
+  ...overrides,
+});
+
+const filtersOf = (calls: Call[]) => calls.filter(([m]) => m === 'eq');
+
+describe('createSupabaseScansRepo: toda consulta filtra por user_id', () => {
+  it('list filtra por usuario y ordena por fecha e id (orden estable)', async () => {
+    const fake = fakeSupabase();
+    await createSupabaseScansRepo(fake.client).list(USER_A, { offset: 20, limit: 21 });
+
+    expect(fake.queries).toHaveLength(1);
+    const calls = fake.queries[0]!;
+    expect(filtersOf(calls)).toEqual([['eq', 'user_id', USER_A]]);
+    expect(calls.filter(([m]) => m === 'order')).toEqual([
+      ['order', 'created_at', { ascending: false }],
+      ['order', 'id', { ascending: false }],
+    ]);
+    expect(calls).toContainEqual(['range', 20, 40]);
+  });
+
+  it('findById filtra por usuario y por id', async () => {
+    const fake = fakeSupabase({ 'scans.select': { data: null, error: null } });
+    const found = await createSupabaseScansRepo(fake.client).findById(USER_A, SCAN_ID);
+
+    expect(found).toBeNull();
+    expect(filtersOf(fake.queries[0]!)).toEqual([
+      ['eq', 'user_id', USER_A],
+      ['eq', 'id', SCAN_ID],
+    ]);
+  });
+
+  it('list marca en su posición la fila con resultado inválido, sin romper las demás', async () => {
+    const row = (id: string, result: unknown) => ({
+      id,
+      created_at: '2026-10-20T12:00:00+00:00',
+      object_name: 'Botella',
+      image_path: null,
+      result,
+    });
+    const ids = ['a', 'b', 'c'].map((c) => `0e7c3b1a-2f4d-4c6e-9a8b-1d2e3f4a5b6${c}`);
+    const fake = fakeSupabase({
+      'scans.select': {
+        data: [
+          row(ids[0]!, classifySaved),
+          row(ids[1]!, { mode: 'otro' }),
+          row(ids[2]!, classifySaved),
+        ],
+        error: null,
+      },
+    });
+
+    const listed = await createSupabaseScansRepo(fake.client).list(USER_A, {
+      offset: 0,
+      limit: 21,
+    });
+
+    expect(listed.map((l) => (l.ok ? l.record.id : `inválida:${l.id}`))).toEqual([
+      ids[0],
+      `inválida:${ids[1]}`,
+      ids[2],
+    ]);
+  });
+
+  it('findById lanza si la fila tiene un resultado inválido', async () => {
+    const fake = fakeSupabase({
+      'scans.select': {
+        data: { id: SCAN_ID, created_at: 'x', object_name: 'B', image_path: null, result: {} },
+        error: null,
+      },
+    });
+    await expect(createSupabaseScansRepo(fake.client).findById(USER_A, SCAN_ID)).rejects.toThrow();
+  });
+
+  it('findById convierte la fila al registro del historial', async () => {
+    const row = {
+      id: SCAN_ID,
+      created_at: '2026-10-20T12:00:00.123456+00:00',
+      object_name: 'Botella',
+      image_path: `${USER_A}/${SCAN_ID}.jpg`,
+      result: classifySaved,
+    };
+    const fake = fakeSupabase({ 'scans.select': { data: row, error: null } });
+
+    expect(await createSupabaseScansRepo(fake.client).findById(USER_A, SCAN_ID)).toEqual({
+      id: SCAN_ID,
+      createdAt: row.created_at,
+      objectName: 'Botella',
+      imagePath: row.image_path,
+      saved: classifySaved,
+    });
+  });
+
+  it('save sube la imagen a la carpeta del usuario e inserta con su user_id', async () => {
+    const fake = fakeSupabase();
+    const ideas = [0, 1, 2].map((i) => ({
+      id: `0e7c3b1a-2f4d-4c6e-9a8b-1d2e3f4a5b6${i}`,
+      ideaIndex: i,
+      title: `Idea ${i}`,
+      description: 'd',
+      extraMaterials: [],
+    }));
+
+    await createSupabaseScansRepo(fake.client).save(newScan({ ideas }));
+
+    expect(fake.storage[0]).toEqual([
+      'upload',
+      SCAN_IMAGES_BUCKET,
+      `${USER_A}/${SCAN_ID}.jpg`,
+      Buffer.from('jpeg'),
+      { contentType: 'image/jpeg', upsert: false },
+    ]);
+    const [scanInsert, ideasInsert] = fake.queries;
+    expect(scanInsert?.[1]).toEqual([
+      'insert',
+      expect.objectContaining({ id: SCAN_ID, user_id: USER_A, result: classifySaved }),
+    ]);
+    expect(ideasInsert?.[0]).toEqual(['from', 'scan_ideas']);
+    expect(ideasInsert?.[1]?.[1]).toHaveLength(3);
+  });
+
+  it('si insertar falla, borra lo hecho (filtrando por user_id) y lanza', async () => {
+    const fake = fakeSupabase({ 'scan_ideas.insert': { error: { message: 'violación' } } });
+    const ideas = [{ id: SCAN_ID, ideaIndex: 0, title: 't', description: 'd', extraMaterials: [] }];
+
+    await expect(createSupabaseScansRepo(fake.client).save(newScan({ ideas }))).rejects.toThrow(
+      'No se pudieron guardar las ideas: violación',
+    );
+
+    const cleanup = fake.queries[2]!;
+    expect(cleanup[1]).toEqual(['delete']);
+    expect(filtersOf(cleanup)).toEqual([
+      ['eq', 'user_id', USER_A],
+      ['eq', 'id', SCAN_ID],
+    ]);
+    expect(fake.storage[1]).toEqual(['remove', SCAN_IMAGES_BUCKET, [`${USER_A}/${SCAN_ID}.jpg`]]);
+  });
+
+  it('si la subida falla, no inserta nada', async () => {
+    const fake = fakeSupabase({ 'storage.upload': { error: { message: 'cuota' } } });
+
+    await expect(createSupabaseScansRepo(fake.client).save(newScan())).rejects.toThrow('cuota');
+    expect(fake.queries).toHaveLength(0);
+  });
+});
+
+describe('createSupabaseScansRepo.signImageUrls', () => {
+  it('firma en lote con vida de 10 minutos', async () => {
+    const fake = fakeSupabase({
+      'storage.createSignedUrls': {
+        data: [
+          { path: 'a.jpg', signedUrl: 'https://s/a', error: null },
+          { path: 'b.jpg', signedUrl: '', error: 'Object not found' },
+        ],
+        error: null,
+      },
+    });
+
+    const urls = await createSupabaseScansRepo(fake.client).signImageUrls(['a.jpg', 'b.jpg']);
+
+    expect(SIGNED_URL_TTL_SECONDS).toBe(600);
+    expect(fake.storage).toEqual([
+      ['createSignedUrls', SCAN_IMAGES_BUCKET, ['a.jpg', 'b.jpg'], 600],
+    ]);
+    expect(urls).toEqual(['https://s/a', null]);
+  });
+
+  it('sin rutas no llama a Storage', async () => {
+    const fake = fakeSupabase();
+    expect(await createSupabaseScansRepo(fake.client).signImageUrls([])).toEqual([]);
+    expect(fake.storage).toHaveLength(0);
+  });
+});

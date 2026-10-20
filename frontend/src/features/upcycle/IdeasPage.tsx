@@ -58,7 +58,8 @@ function successActions(
   return [{ label: 'Escanear otro residuo', onClick: backToCamera, primary: true }];
 }
 
-function UpcycleResultView({
+/** Vista de las ideas; también la usa el detalle del historial (HU-13). */
+export function UpcycleResultView({
   result,
   onOpenIdea,
 }: {

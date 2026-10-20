@@ -79,7 +79,7 @@ function toClassifyResponse(
   disposal: Disposal | null,
 ): ClassifyResponse {
   return {
-    // scanId/saved: guardado con sesión (HU-04).
+    // scanId/saved: los completa `saveScan` si hay sesión (HU-13).
     scanId: null,
     mode: 'classify',
     result: {

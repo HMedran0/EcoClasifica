@@ -35,20 +35,23 @@ export const disposalSchema = z.object({
 });
 export type Disposal = z.infer<typeof disposalSchema>;
 
+export const classifyResultSchema = z.object({
+  object: z.string(),
+  material: z.enum(MATERIALS),
+  materialDetail: z.string(),
+  confidence: z.number().min(0).max(1),
+  lowConfidence: z.boolean(),
+  /** Hasta 2 hipótesis distintas del material principal, de mayor a menor certeza. */
+  alternatives: z
+    .array(z.object({ material: z.enum(MATERIALS), confidence: z.number().min(0).max(1) }))
+    .max(2),
+});
+export type ClassifyResult = z.infer<typeof classifyResultSchema>;
+
 export const classifyResponseSchema = z.object({
   scanId: z.string().uuid().nullable(),
   mode: z.literal('classify'),
-  result: z.object({
-    object: z.string(),
-    material: z.enum(MATERIALS),
-    materialDetail: z.string(),
-    confidence: z.number().min(0).max(1),
-    lowConfidence: z.boolean(),
-    /** Hasta 2 hipótesis distintas del material principal, de mayor a menor certeza. */
-    alternatives: z
-      .array(z.object({ material: z.enum(MATERIALS), confidence: z.number().min(0).max(1) }))
-      .max(2),
-  }),
+  result: classifyResultSchema,
   /** `null` cuando la certeza es baja (el cliente muestra las alternativas). */
   disposal: disposalSchema.nullable(),
   saved: z.boolean(),
@@ -61,6 +64,8 @@ export const ideaSchema = z.object({
     .int()
     .min(0)
     .max(UPCYCLE_IDEAS_COUNT - 1),
+  /** Solo si el escaneo se guardó (id en `scan_ideas`, para favoritos y chat). */
+  ideaId: z.string().uuid().optional(),
   title: z.string().max(UPCYCLE_TITLE_MAX),
   description: z.string().max(UPCYCLE_DESCRIPTION_MAX),
   extraMaterials: z.array(z.string()).max(UPCYCLE_EXTRA_MATERIALS_MAX),

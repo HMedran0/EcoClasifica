@@ -4,33 +4,34 @@ _Actualizado: 2026-10-20 · Reescribir completo en cada `/handoff` (≤ 40 líne
 
 ## Fase actual
 
-**F4 — Cuentas:** en curso. **HU-04 hecha** (rama `feat/HU-04-auth`, fusionada en `main`). Siguen HU-13 (historial) y HU-15 (favoritos).
+**F4 — Cuentas:** en curso. **HU-04 y HU-13 hechas** (HU-13 en `feat/HU-13-historial`, fusionada en `main`). Siguen HU-15 (favoritos), HU-14 (eliminar) y HU-16.
 
-## HU-04 (registro e inicio de sesión)
+## HU-13 (historial)
 
-- Backend: `optionalAuth`/`requireAuth` (`middlewares/auth.ts`) con `getClaims` (`services/auth.service.ts`); `optionalAuth` en `/scan/*` y `/chat` (aún `saved: false`); `GET /api/v1/me` (`meResponseSchema`); logger inyectable con `redact` probado.
-- Frontend: `/entrar` (pestañas, Google con `redirectTo` = origen + `?volver=` validado, «Reenviar correo», errores traducidos), `authStore` + `initAuth` en `main.tsx`, `RequireAuth` (sin usar aún), cuenta en la portada, Bearer en `api/client.ts` con renovación ante 401. PKCE.
-- Build y CI exigen `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`. Se quitó `SUPABASE_JWT_SECRET`.
-- Local: `npm run check` OK (backend 186, frontend 203).
+- Migración `0003_scans_result.sql` (ya ejecutada en Supabase): `scans.result` jsonb `not null` con `check` de objeto. Su `delete` de filas sin `result` no borró nada (no había escaneos guardados).
+- Guardado con sesión en `/scan/*` (`services/scanSave.service.ts`, `repositories/scans.repo.ts`): imagen, `scans` y `scan_ideas`, con rollback. Si falla → `saved: false` y `error` en el log sin datos personales.
+- `GET /history?page=N` y `GET /history/:id` (`history.routes.ts`), filtrados por `user_id`; id ajeno → 404. Filas con `result` inválido: se omiten de la lista (`warn` con su id) y el detalle responde 500.
+- Frontend: `/historial` y `/historial/:id` con `RequireAuth`, chat desde ideas guardadas (hilo `historial:<scanId>:<i>`), «Mi historial» en la portada y aviso en la cámara.
+- Local: `npm run check` OK (backend 224, frontend 219).
 
 ## Decisiones
 
-- ADR-26: validación con `getClaims`, códigos 401/500, PKCE, `?volver=` interno y 401 → `refreshSession` → reintento único.
+- ADR-27: copia en `scans.result`, ids de ideas generados en el backend, orden `created_at desc, id desc`, URLs firmadas de 10 min, 404 para lo ajeno.
 
 ## Problemas abiertos
 
-1. **Sin probar en Android real:** registro con correo (verificación y reenvío), Google y regreso a la ruta de origen.
-2. **Supabase:** las Redirect URLs deben llevar `/**` (`https://eco-clasifica.vercel.app/**`, `http://localhost:5173/**`); si no, se vuelve siempre a la Site URL. En Railway, borrar `SUPABASE_JWT_SECRET` si existe.
-3. PKCE: el enlace de verificación abierto en otro navegador confirma el correo, pero no deja la sesión iniciada.
-4. Offline en `/camara`, `/resultado`, `/ideas` y `/chat`: solo el banner; `NETWORK_ERROR` no dice «requiere internet». Sin aviso «Lista para usar sin conexión».
-5. Solo desarrollo: StrictMode lanza dos peticiones al montar `/resultado` o `/ideas`.
-6. Prueba intermitente del frontend (foco en `ResultPage`; sospecha `findBy` de 1 s bajo carga).
-7. Rama `fix/arranque-config` pendiente (`''` como faltante, log en Railway, `ALLOWED_ORIGINS`, `https:` en `VITE_API_URL`).
-8. Vitest del backend (v2) frente al del frontend (v5): con la unidad en minúscula (`c:\…`) fallan los 18 archivos del frontend.
-9. Logo oficial pendiente. Normativa de contenedores de San Juan Nepomuceno sin confirmar.
-10. Upcycle y chat, menores: emojis al recortar; `description`/`extraMaterials` solo los protege el prompt; `scanId` sin uso (filtrar por `req.user.id` en HU-13); `toPlainText` no quita viñetas `*` ni enlaces.
-11. HU-19 (recuperar contraseña) pendiente.
+1. **Sin probar contra Supabase real:** subida a `scan-images`, URLs firmadas, rollback e historial en Android. Tampoco el registro de HU-04 en Android (correo, Google, regreso a la ruta de origen).
+2. **Supabase:** las Redirect URLs deben llevar `/**`. En Railway, borrar `SUPABASE_JWT_SECRET` si existe.
+3. PKCE: el enlace de verificación abierto en otro navegador no deja la sesión iniciada.
+4. Offline en `/camara`, `/resultado`, `/ideas`, `/chat` e `/historial`: solo el banner; `NETWORK_ERROR` no dice «requiere internet».
+5. Solo en desarrollo: StrictMode duplica peticiones al montar `/resultado` o `/ideas`.
+6. Prueba intermitente del frontend (foco en `ResultPage`).
+7. Rama `fix/arranque-config` pendiente.
+8. Vitest del backend (v2) frente al del frontend (v5): con la unidad en minúscula (`c:\…`) fallan los archivos del frontend.
+9. Logo oficial y normativa de contenedores de San Juan Nepomuceno sin confirmar.
+10. `/chat` acepta `scanId` sin verificar su dueño. Hoy no se usa, pero si HU-14/15 lo usan, deben filtrar por `user_id`. El chat aún no se guarda (`chat_messages`).
+11. Las imágenes se guardan siempre como `.jpg` (el cliente solo envía JPEG). HU-19 pendiente.
 
 ## Siguiente acción
 
-Probar HU-04 en Android (puntos 1 y 2). Luego `/story HU-13` en la rama `feat/HU-13-historial`: guardar escaneos con sesión (`saved: true`), `GET /history` filtrado por `req.user.id`, pruebas de acceso entre usuarios y `/historial` con `RequireAuth`.
+Probar en producción un escaneo con sesión, revisar `/historial` y su detalle (punto 1). Luego `/story HU-15` en la rama `feat/HU-15-favoritos`: `POST/GET/DELETE /favorites` con `ideaId` de `scan_ideas` (verificando que el escaneo sea de `req.user.id`) y snapshot en `favorites`.
