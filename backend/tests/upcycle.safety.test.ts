@@ -26,6 +26,12 @@ describe('hasBlockedTerm', () => {
     'Tubo fluorescente',
     'Vidrio roto',
     'Vidrios rotos de ventana',
+    'Bomba casera',
+    'Bombas caseras',
+    'Bombas molotov',
+    'Material explosivo',
+    'Pólvora negra',
+    'Arma hechiza',
   ])('bloquea "%s"', (name) => {
     expect(hasBlockedTerm(name)).toBe(true);
   });
@@ -36,6 +42,11 @@ describe('hasBlockedTerm', () => {
     'Pilar de madera',
     'Toalla de baño',
     'Bolsa plástica',
+    'Armario de cartón',
+    'Armazón de lentes',
+    'Bombona de agua',
+    'Bomba de agua',
+    'Bomba de bicicleta',
   ])('no bloquea "%s"', (name) => {
     expect(hasBlockedTerm(name)).toBe(false);
   });

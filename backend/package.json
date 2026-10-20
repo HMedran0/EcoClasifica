@@ -9,7 +9,8 @@
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "spike": "tsx scripts/spike-deepseek.ts"
+    "spike": "tsx scripts/spike-deepseek.ts",
+    "spike:chat": "tsx scripts/spike-chat.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

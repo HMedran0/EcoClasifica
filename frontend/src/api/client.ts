@@ -1,5 +1,8 @@
 import {
+  chatResponseSchema,
   classifyResponseSchema,
+  type ChatResponse,
+  type chatRequestSchema,
   errorBodySchema,
   healthResponseSchema,
   type ClassifyResponse,
@@ -14,6 +17,7 @@ import { ApiError, isBackendErrorCode } from './errors';
 export const REQUEST_TIMEOUT_MS = 25_000;
 
 export type ScanRequestInput = z.input<typeof scanRequestSchema>;
+export type ChatRequestInput = z.input<typeof chatRequestSchema>;
 
 export interface ApiClientOptions {
   baseUrl: string;
@@ -75,6 +79,8 @@ export function createApiClient({
       request('/api/v1/scan/classify', { method: 'POST', body: req }, classifyResponseSchema, opts),
     upcycle: (req: ScanRequestInput, opts?: RequestOptions): Promise<UpcycleResponse> =>
       request('/api/v1/scan/upcycle', { method: 'POST', body: req }, upcycleResponseSchema, opts),
+    chat: (req: ChatRequestInput, opts?: RequestOptions): Promise<ChatResponse> =>
+      request('/api/v1/chat', { method: 'POST', body: req }, chatResponseSchema, opts),
     /** Indicador de conexión de la pantalla inicial (prueba de humo de CORS en producción). */
     health: (opts?: RequestOptions): Promise<HealthResponse> =>
       request('/api/health', { method: 'GET' }, healthResponseSchema, opts),

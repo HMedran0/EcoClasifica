@@ -7,3 +7,17 @@ export function truncateWords(text: string, max: number): string {
   const base = lastSpace > 0 ? clean.slice(0, lastSpace) : clean.slice(0, max - 1);
   return `${base.replace(/[\s,;:.\-–—]+$/, '')}…`;
 }
+
+/**
+ * Deja la respuesta del chat en texto plano: sin etiquetas HTML ni marcas de markdown
+ * (negritas, encabezados). Conserva los saltos de línea y las listas numeradas.
+ */
+export function toPlainText(text: string): string {
+  return text
+    .replace(/<[^>]*>/g, '')
+    .replace(/\*\*|__/g, '')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/[ \t]+$/gm, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}

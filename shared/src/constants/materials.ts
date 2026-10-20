@@ -27,6 +27,11 @@ export type ImageMime = (typeof IMAGE_MIME_TYPES)[number];
 export const LOW_CONFIDENCE_THRESHOLD = 0.6;
 /** Máximo de mensajes de chat que se envían a la IA. */
 export const MAX_CHAT_MESSAGES = 10;
+/** Tope de mensajes aceptados por petición (se recortan a los últimos `MAX_CHAT_MESSAGES`). */
+export const MAX_CHAT_MESSAGES_ACCEPTED = 50;
+export const CHAT_MESSAGE_MAX = 1000;
+export const IDEA_OBJECT_NAME_MAX = 80;
+export const IDEA_EXTRA_MATERIAL_MAX = 60;
 /** Tamaño máximo de la imagen (bytes, ya decodificada). */
 export const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 /** Longitud máxima en Base64 de una imagen de 4 MB (4 caracteres por cada 3 bytes). */
