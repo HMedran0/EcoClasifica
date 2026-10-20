@@ -1,5 +1,6 @@
 import { BrowserRouter, Route, Routes } from 'react-router';
 import { CameraPage } from '../features/camera/CameraPage';
+import { LoginPage } from '../features/auth/LoginPage';
 import { ChatPage } from '../features/chat/ChatPage';
 import { ResultPage } from '../features/classify/ResultPage';
 import { HomePage } from '../features/home/HomePage';
@@ -17,6 +18,8 @@ export function App() {
         <Route path="/resultado" element={<ResultPage />} />
         <Route path="/ideas" element={<IdeasPage />} />
         <Route path="/chat" element={<ChatPage />} />
+        <Route path="/entrar" element={<LoginPage />} />
+        {/* HU-13 y HU-15: <Route path="/historial" element={<RequireAuth>…</RequireAuth>} /> */}
       </Routes>
       <UpdatePrompt />
     </BrowserRouter>

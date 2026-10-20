@@ -24,15 +24,15 @@ Ambos despliegan la rama `main` automáticamente. Railway espera a que pase el C
 - Settings → Networking → _Generate Domain_. No definas `PORT`: Railway la inyecta.
 - Variables:
 
-| Variable                                           | Valor                                                                         |
-| -------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `NODE_ENV`                                         | `production`                                                                  |
-| `DEEPSEEK_API_KEY`                                 | secreta                                                                       |
-| `DEEPSEEK_MODEL`, `DEEPSEEK_BASE_URL`              | solo si difieren del valor por defecto                                        |
-| `SUPABASE_URL`                                     | `https://<proyecto>.supabase.co` (**sin** `/rest/v1`)                         |
-| `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_JWT_SECRET` | secretas                                                                      |
-| `ALLOWED_ORIGINS`                                  | `https://eco-clasifica.vercel.app` (varios separados por coma; sin `/` final) |
-| `DEFAULT_MUNICIPALITY_CODE`                        | `13657`                                                                       |
+| Variable                              | Valor                                                                         |
+| ------------------------------------- | ----------------------------------------------------------------------------- |
+| `NODE_ENV`                            | `production`                                                                  |
+| `DEEPSEEK_API_KEY`                    | secreta                                                                       |
+| `DEEPSEEK_MODEL`, `DEEPSEEK_BASE_URL` | solo si difieren del valor por defecto                                        |
+| `SUPABASE_URL`                        | `https://<proyecto>.supabase.co` (**sin** `/rest/v1`)                         |
+| `SUPABASE_SERVICE_ROLE_KEY`           | secreta                                                                       |
+| `ALLOWED_ORIGINS`                     | `https://eco-clasifica.vercel.app` (varios separados por coma; sin `/` final) |
+| `DEFAULT_MUNICIPALITY_CODE`           | `13657`                                                                       |
 
 ## 2. Vercel (frontend)
 
@@ -40,13 +40,21 @@ Ambos despliegan la rama `main` automáticamente. Railway espera a que pase el C
 - Comprueba que esté activo _Include source files outside of the Root Directory_ (viene activo por defecto; el contrato se importa de `../shared/src`, ADR-17).
 - Variables (se publican en el bundle: **nunca secretos**):
 
-| Variable                                      | Valor                              |
-| --------------------------------------------- | ---------------------------------- |
-| `VITE_API_URL`                                | dominio de Railway, con `https://` |
-| `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | llegan en F4                       |
+| Variable                 | Valor                               |
+| ------------------------ | ----------------------------------- |
+| `VITE_API_URL`           | dominio de Railway, con `https://`  |
+| `VITE_SUPABASE_URL`      | `https://<proyecto>.supabase.co`    |
+| `VITE_SUPABASE_ANON_KEY` | clave publicable `sb_publishable_…` |
 
-Sin `VITE_API_URL` el build de producción **falla a propósito** (`vite.config.ts`); antes, la app llamaba a su propio dominio.
+Sin estas tres variables el build de producción **falla a propósito** (`vite.config.ts`); antes, la app llamaba a su propio dominio.
 Cambiar una variable `VITE_*` exige redesplegar: se fijan al compilar.
+
+### Supabase Auth (HU-04)
+
+- _Authentication → Sign In / Providers_: Email con **Confirm email** activo; Google con Client ID y Secret.
+- _URL Configuration_: Site URL = dominio de Vercel. En **Redirect URLs** usa comodín de ruta, `https://eco-clasifica.vercel.app/**` y `http://localhost:5173/**`: la app vuelve a la ruta de origen (`?volver=`), y una URL sin `/**` hace que Supabase redirija a la Site URL.
+- El cliente usa PKCE: el enlace de verificación abierto en otro navegador confirma el correo, pero no deja la sesión iniciada (hay que entrar con la contraseña).
+- El backend valida el token con `getClaims`: no necesita el secreto JWT (si `SUPABASE_JWT_SECRET` sigue en Railway, bórrala).
 
 ## 3. Prueba de humo
 

@@ -9,6 +9,7 @@ Base: `/api/v1` (salud en `/api/health`). JSON siempre. Auth: `Authorization: Be
 | POST   | `/api/v1/scan/classify` | Opcional | Modo A: clasifica y devuelve contenedor |
 | POST   | `/api/v1/scan/upcycle`  | Opcional | Modo B: 3 ideas de segunda vida         |
 | POST   | `/api/v1/chat`          | Opcional | Chat paso a paso sobre una idea         |
+| GET    | `/api/v1/me`            | Sí       | Perfil del usuario con sesión           |
 | GET    | `/api/v1/history`       | Sí       | Escaneos del usuario (paginado)         |
 | GET    | `/api/v1/history/:id`   | Sí       | Detalle de un escaneo                   |
 | DELETE | `/api/v1/history/:id`   | Sí       | Elimina escaneo e imagen                |
@@ -20,6 +21,19 @@ Base: `/api/v1` (salud en `/api/health`). JSON siempre. Auth: `Authorization: Be
 Respuesta de `/api/health` (`healthResponseSchema`): `{ status: 'ok', service: 'ecoclasifica-api', time: <ISO 8601> }`. La pantalla inicial la usa como indicador de conexión (prueba de humo de CORS).
 
 Sin token, los endpoints de escaneo funcionan pero no guardan nada (`saved: false`).
+
+### Autenticación (HU-04)
+
+- `optionalAuth` (`/scan/*`, `/chat`): sin cabecera `Authorization` → anónimo; con cabecera y token inválido, vencido o mal formado → `401 UNAUTHORIZED`. Por ahora no se guarda nada aunque haya sesión (guardar: HU-13).
+- `requireAuth` (`/me`, historial, favoritos): sin token o inválido → `401 UNAUTHORIZED`.
+- El token se valida con `supabase.auth.getClaims(token)`: con claves de firma asimétricas verifica en local contra el JWKS (en caché); con el secreto simétrico (HS256) recurre a `getUser()` (una llamada a Supabase Auth). Rechaza tokens vencidos.
+- Con «Confirm email» activo, Supabase no emite sesión a correos sin verificar.
+- Los logs ocultan `authorization` y `cookie` (`redact` de pino).
+- Cliente web: si un endpoint responde 401 a una petición con token, llama a `refreshSession()`. Si renueva, reintenta una vez con el token nuevo; si la renovación falla (sesión revocada, usuario borrado), cierra la sesión local y reintenta una vez sin token, así que escanear sigue funcionando. Nunca hay más de un reintento.
+
+## GET /me
+
+Respuesta 200 (`meResponseSchema`): `{ "id": "uuid", "email": "ana@ejemplo.com", "displayName": "Ana" }`. `email` sale del token; `displayName`, de `profiles` (filtrado por `req.user.id`; `null` si no hay perfil o nombre).
 
 ## POST /scan/classify
 

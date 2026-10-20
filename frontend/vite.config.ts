@@ -6,13 +6,22 @@ import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
 import { manifest } from './src/pwa/manifest.ts';
 
-/** Sin VITE_API_URL el bundle llamaría al propio dominio de Vercel: el build de producción falla antes. */
-function assertApiUrl(env: Record<string, string>): void {
-  const value = env.VITE_API_URL;
-  if (!value || !URL.canParse(value)) {
+const SET_IN_VERCEL = 'Defínela en Vercel → Settings → Environment Variables.';
+
+/** Sin estas variables el bundle no funcionaría en Vercel: el build de producción falla antes. */
+function assertBuildEnv(env: Record<string, string>): void {
+  if (!env.VITE_API_URL || !URL.canParse(env.VITE_API_URL)) {
     throw new Error(
       'VITE_API_URL debe ser la URL absoluta del backend (p. ej. https://<servicio>.up.railway.app). ' +
-        'Defínela en Vercel → Settings → Environment Variables.',
+        SET_IN_VERCEL,
+    );
+  }
+  if (!env.VITE_SUPABASE_URL || !URL.canParse(env.VITE_SUPABASE_URL)) {
+    throw new Error(`VITE_SUPABASE_URL debe ser https://<proyecto>.supabase.co. ${SET_IN_VERCEL}`);
+  }
+  if (!env.VITE_SUPABASE_ANON_KEY) {
+    throw new Error(
+      `Falta VITE_SUPABASE_ANON_KEY (clave publicable sb_publishable_…). ${SET_IN_VERCEL}`,
     );
   }
 }
@@ -39,7 +48,7 @@ const frontendDir = fileURLToPath(new URL('.', import.meta.url));
 
 export default defineConfig(({ command, mode }) => {
   if (command === 'build' && mode === 'production') {
-    assertApiUrl(loadEnv(mode, frontendDir, 'VITE_'));
+    assertBuildEnv(loadEnv(mode, frontendDir, 'VITE_'));
   }
   return {
     plugins: [react(), tailwindcss(), pwa()],
@@ -56,6 +65,11 @@ export default defineConfig(({ command, mode }) => {
       environment: 'jsdom',
       include: ['src/**/*.test.{ts,tsx}'],
       setupFiles: ['src/test/setup.ts'],
+      // Valores ficticios: las pruebas simulan Supabase y nunca llaman al proyecto real.
+      env: {
+        VITE_SUPABASE_URL: 'http://localhost:54321',
+        VITE_SUPABASE_ANON_KEY: 'sb_publishable_prueba',
+      },
     },
   };
 });
