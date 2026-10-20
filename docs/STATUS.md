@@ -4,32 +4,34 @@ _Actualizado: 2026-10-19 · Reescribir completo en cada `/handoff` (≤ 40 líne
 
 ## Fase actual
 
-**F3 — Upcycle:** por empezar. **F2 cerrada** (criterio de salida cumplido el 2026-10-19).
+**F3 — Upcycle:** en curso. HU-09 **hecha** (rama `feat/HU-09-upcycle`, pendiente de commit y merge). F2 cerrada el 2026-10-19.
 
-## Cierre de F2 (prueba en Android real, Chrome, https://eco-clasifica.vercel.app)
+## HU-09 (solo backend)
 
-- Instalación PWA: ícono maskable correcto, standalone con barra verde; Chrome de escritorio ofrece «Instalar EcoClasifica».
-- Flujo A con 7 objetos: plástico → blanco, ahuyama → verde, cargador y cable → punto limpio, persona → «No parece un residuo», bolsa con pañal → baja certeza. 2–3 s por respuesta; foto vertical sin girar.
-- Modo avión: banner y «Escanear residuo» deshabilitado; al volver la red, «Servicio disponible».
-- TalkBack: recorrido completo sin problemas. CI de `main` en verde.
-- Local: `npm run check` OK (backend 67, frontend 101); build OK con `VITE_API_URL`; `/api/health` en Railway 200; CORS desde Vercel 204.
+- `POST /api/v1/scan/upcycle`: mismo cuerpo, validación, límite y errores que classify. `result` es una unión por `canUpcycle`: `{ objectName, difficulty, ideas[3] }` o `{ objectName, reason }`.
+- Exactamente 3 ideas (más → recorta; menos → reintento → 502). Recortes en palabra completa: title 60, description 120, reason 160; extraMaterials ≤ 5. `difficulty` se normaliza («facil», «FÁCIL», «Media»).
+- `is_waste: false` → 422 aunque `can_upcycle` venga true. Respaldos del backend en `upcycle.safety.ts` (material peligroso/electronico y términos bloqueados), con `warn`.
+- Spike real (384 tokens bastan, ≈ 250 de salida, 2–3 s): frasco y botella → 3 ideas; bolsa-panal → `can_upcycle: false` (gracias a la regla «bolsa cerrada u opaca» del prompt).
+- `npm run check` OK (backend 128, frontend 101). `code-reviewer` sin bloqueantes.
 
 ## Decisiones
 
-- ADR-22: PWA (NetworkOnly para la API, íconos desde SVG versionados, un solo aviso sin red).
-- ADR-21: instrucciones genéricas por material. ADR-20: prioridad del punto limpio.
+- ADR-23: respaldos de seguridad de upcycle en el backend, 3 ideas exactas, `max_tokens` 384.
+- ADR-22: PWA. ADR-21: instrucciones genéricas. ADR-20: prioridad del punto limpio.
 
 ## Problemas abiertos
 
-1. **Offline en `/camara` y `/resultado`:** solo se ve el banner; nada impide entrar por URL o historial, y el `NETWORK_ERROR` del escaneo no dice «requiere internet».
-2. **Sin aviso «Lista para usar sin conexión»** (`offlineReady` de `useRegisterSW` no se usa).
+1. **Offline en `/camara` y `/resultado`:** solo el banner; el `NETWORK_ERROR` no dice «requiere internet».
+2. Sin aviso «Lista para usar sin conexión» (`offlineReady` sin usar).
 3. Solo desarrollo: StrictMode lanza dos `classify` al montar `/resultado`.
 4. Prueba intermitente del frontend (sospecha `findBy` de 1 s bajo carga).
 5. Rama `fix/arranque-config` pendiente (`''` como faltante, log en Railway, `ALLOWED_ORIGINS`, `https:` en `VITE_API_URL`).
 6. Alinear Vitest del backend (v2) con el frontend (v5).
-7. Logo: trazado oficial pendiente (los íconos se regeneran con `npm run icons`).
+7. Logo: trazado oficial pendiente.
 8. Normativa de contenedores de San Juan Nepomuceno sin confirmar.
+9. Upcycle: menores del review sin aplicar (no partir emojis al recortar; `parse` final de la respuesta). La bolsa-panal depende del prompt (la IA no ve el pañal).
+10. `docs/BACKLOG.md` no pasaba prettier en `main`; se formateó en esta rama.
 
 ## Siguiente acción
 
-Empezar F3 con `/story HU-09` (rama `feat/HU-09-upcycle`): esquema Zod de `POST /scan/upcycle` en `shared`, prompt y servicio con `AiProvider` simulado en pruebas. Orden de F3 en `docs/BACKLOG.md`: HU-09 → HU-03 → HU-10 → HU-11 → HU-18 (botón «Instalar app» con `beforeinstallprompt`, solo si no está instalada).
+Commit y merge de `feat/HU-09-upcycle`; desplegar en Railway y probar `/scan/upcycle` en producción. Luego `/story HU-03` (interruptor de modo en la cámara, consume `/scan/upcycle`; con `canUpcycle: false` sugerir Clasificar). Orden de F3: HU-03 → HU-10 → HU-11 → HU-18.

@@ -10,5 +10,6 @@ export function createScanRoutes(deps: ClassifyDeps) {
   const controller = createScanController(deps);
 
   router.post('/scan/classify', validate(scanRequestSchema), asyncHandler(controller.classify));
+  router.post('/scan/upcycle', validate(scanRequestSchema), asyncHandler(controller.upcycle));
   return router;
 }

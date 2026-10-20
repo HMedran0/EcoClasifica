@@ -6,6 +6,11 @@ import {
   MATERIALS,
   MAX_IMAGE_BASE64_LENGTH,
   MAX_LOCALE_LENGTH,
+  UPCYCLE_DESCRIPTION_MAX,
+  UPCYCLE_EXTRA_MATERIALS_MAX,
+  UPCYCLE_IDEAS_COUNT,
+  UPCYCLE_REASON_MAX,
+  UPCYCLE_TITLE_MAX,
 } from '../constants/materials';
 
 /** Solicitud de escaneo (clasificar y upcycle comparten forma). La imagen va en Base64 sin prefijo `data:`. */
@@ -51,21 +56,37 @@ export const classifyResponseSchema = z.object({
 export type ClassifyResponse = z.infer<typeof classifyResponseSchema>;
 
 export const ideaSchema = z.object({
-  ideaIndex: z.number().int().min(0).max(2),
-  title: z.string(),
-  description: z.string(),
-  extraMaterials: z.array(z.string()),
+  ideaIndex: z
+    .number()
+    .int()
+    .min(0)
+    .max(UPCYCLE_IDEAS_COUNT - 1),
+  title: z.string().max(UPCYCLE_TITLE_MAX),
+  description: z.string().max(UPCYCLE_DESCRIPTION_MAX),
+  extraMaterials: z.array(z.string()).max(UPCYCLE_EXTRA_MATERIALS_MAX),
 });
 export type Idea = z.infer<typeof ideaSchema>;
+
+export const upcycleResultSchema = z.discriminatedUnion('canUpcycle', [
+  z.object({
+    canUpcycle: z.literal(true),
+    objectName: z.string(),
+    difficulty: z.enum(DIFFICULTIES),
+    ideas: z.array(ideaSchema).length(UPCYCLE_IDEAS_COUNT),
+  }),
+  /** Peligrosos, sanitarios o vidrio roto: sin ideas; el cliente sugiere el modo Clasificar. */
+  z.object({
+    canUpcycle: z.literal(false),
+    objectName: z.string(),
+    reason: z.string().max(UPCYCLE_REASON_MAX),
+  }),
+]);
+export type UpcycleResult = z.infer<typeof upcycleResultSchema>;
 
 export const upcycleResponseSchema = z.object({
   scanId: z.string().uuid().nullable(),
   mode: z.literal('upcycle'),
-  result: z.object({
-    objectName: z.string(),
-    difficulty: z.enum(DIFFICULTIES),
-    ideas: z.array(ideaSchema).length(3),
-  }),
+  result: upcycleResultSchema,
   saved: z.boolean(),
 });
 export type UpcycleResponse = z.infer<typeof upcycleResponseSchema>;

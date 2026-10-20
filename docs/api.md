@@ -75,6 +75,7 @@ Solicitud igual a classify. Respuesta 200:
   "scanId": "uuid | null",
   "mode": "upcycle",
   "result": {
+    "canUpcycle": true,
     "objectName": "Frasco de vidrio",
     "difficulty": "Fácil",
     "ideas": [
@@ -101,6 +102,29 @@ Solicitud igual a classify. Respuesta 200:
   "saved": true
 }
 ```
+
+`result` es una unión por `canUpcycle`. Si el objeto es peligroso (pilas, baterías, medicamentos, químicos, aceites, aerosoles), sanitario (pañales, toallas higiénicas, papel higiénico usado), vidrio roto o una bolsa cerrada cuyo contenido no se ve, no hay ideas ni `difficulty`:
+
+```json
+{
+  "scanId": null,
+  "mode": "upcycle",
+  "result": {
+    "canUpcycle": false,
+    "objectName": "Bolsa de plástico cerrada con contenido",
+    "reason": "Bolsa cerrada y opaca: puede ocultar residuos sanitarios o peligrosos."
+  },
+  "saved": false
+}
+```
+
+- El cliente sugiere el modo Clasificar cuando `canUpcycle` es `false`.
+- Respaldos del backend (fallan hacia lo seguro, aunque la IA dé ideas): `material` de la IA `peligroso` o `electronico`, u `objectName` con un término bloqueado (por palabra, sin mayúsculas ni tildes, admite plural: pila, bateria, medicamento, jeringa, aguja, pañal, toalla higienica, aerosol, insecticida, veneno, quimico, cloro, thinner, gasolina, bombillo, fluorescente, vidrio roto; «aceite» no) → `canUpcycle: false`. Se registra un `warn` con `objectName`, `material` y la regla.
+- Siempre 3 ideas (`ideaIndex` 0–2): si la IA da más, se toman las 3 primeras; si da menos, se reintenta una vez y luego `502 AI_BAD_RESPONSE`.
+- Recortes en palabra completa con «…»: `title` ≤ 60, `description` ≤ 120, `reason` ≤ 160 caracteres. `extraMaterials` ≤ 5.
+- `difficulty` se normaliza sin distinguir mayúsculas ni tildes («facil», «FÁCIL» → «Fácil»; «Media» → «Medio»).
+- Sin residuo → `422 NOT_A_WASTE` (aunque la IA diga `can_upcycle: true`). Misma validación de imagen, límite de peticiones y errores que classify.
+- `scanId` es `null` y `saved` es `false` hasta el guardado con sesión (HU-04).
 
 ## POST /chat
 
@@ -146,7 +170,7 @@ Formato compatible con OpenAI `POST {DEEPSEEK_BASE_URL}/chat/completions` (**con
 }
 ```
 
-Salida esperada de la IA al clasificar: `{ is_waste, object, material, material_detail, confidence, alternatives[≤2] }` (el validador tolera hasta 4 alternativas y el backend deja las 2 mejores). Al hacer upcycle: `{ object_name, difficulty, ideas[3]: { title, description, extra_materials[≤5] } }`. Prompts en `backend/src/services/ai/prompts.ts`.
+Salida esperada de la IA al clasificar: `{ is_waste, object, material, material_detail, confidence, alternatives[≤2] }` (el validador tolera hasta 4 alternativas y el backend deja las 2 mejores). Al hacer upcycle: `{ is_waste, can_upcycle, reason, object_name, material, difficulty, ideas[3]: { title, description, extra_materials[≤5] } }` (con `can_upcycle: false` van `ideas: []` y sin `difficulty`; el validador tolera hasta 8 ideas y textos largos, y el backend recorta). Con 384 tokens alcanza: 3 ideas ≈ 240 tokens de salida (spike 2026-10-19). Prompts en `backend/src/services/ai/prompts.ts`.
 
 ## Seguridad transversal
 
