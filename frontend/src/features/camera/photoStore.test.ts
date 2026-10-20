@@ -30,7 +30,11 @@ describe('photoStore', () => {
     setPhoto(compressed);
     const firstId = usePhotoStore.getState().photo!.id;
     saveResult('upcycle', firstId, saved);
-    expect(usePhotoStore.getState().results.upcycle).toEqual({ photoId: firstId, data: saved });
+    expect(usePhotoStore.getState().results.upcycle).toEqual({
+      photoId: firstId,
+      data: saved,
+      withSession: false,
+    });
 
     setPhoto(compressed);
     expect(usePhotoStore.getState().photo!.id).not.toBe(firstId);

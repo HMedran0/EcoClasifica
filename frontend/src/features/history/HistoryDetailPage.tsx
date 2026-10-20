@@ -7,6 +7,8 @@ import { ModeBadge } from '../camera/ModeSwitch';
 import type { ChatLocationState } from '../chat/ChatPage';
 import { toChatIdea } from '../chat/chatIdea';
 import { ClassifyResult } from '../classify/ResultPage';
+import type { FavoritesApi } from '../favorites/FavoriteButton';
+import { setFavorites } from '../favorites/favoritesStore';
 import { toResultView } from '../classify/resultView';
 import { PRIMARY, SECONDARY, TITLE } from '../scan/ScanScreen';
 import { UpcycleResultView } from '../upcycle/IdeasPage';
@@ -16,6 +18,7 @@ export type HistoryItemRequest = (id: string, opts?: RequestOptions) => Promise<
 
 interface HistoryDetailPageProps {
   historyItem?: HistoryItemRequest;
+  favorites?: FavoritesApi;
 }
 
 type DetailState =
@@ -24,7 +27,10 @@ type DetailState =
   | { kind: 'error'; message: string; retryable: boolean };
 
 /** HU-13: un escaneo guardado, mostrado desde su copia (sin volver a llamar a la IA). */
-export function HistoryDetailPage({ historyItem = api.historyItem }: HistoryDetailPageProps) {
+export function HistoryDetailPage({
+  historyItem = api.historyItem,
+  favorites = api,
+}: HistoryDetailPageProps) {
   const { id = '' } = useParams();
   const [attempt, setAttempt] = useState(0);
   // La respuesta guarda a qué petición pertenece: otro id o un reintento vuelven a «cargando».
@@ -38,7 +44,10 @@ export function HistoryDetailPage({ historyItem = api.historyItem }: HistoryDeta
     const key = `${id}#${attempt}`;
     historyItem(id, { signal: controller.signal }).then(
       (detail) => {
-        if (!controller.signal.aborted) setSettled({ key, state: { kind: 'ready', detail } });
+        if (controller.signal.aborted) return;
+        // El servidor sabe qué ideas son favoritas: alimenta el store que leen los corazones.
+        setFavorites(favoriteEntries(detail));
+        setSettled({ key, state: { kind: 'ready', detail } });
       },
       (err: unknown) => {
         if (!controller.signal.aborted) setSettled({ key, state: toErrorState(err) });
@@ -67,7 +76,7 @@ export function HistoryDetailPage({ historyItem = api.historyItem }: HistoryDeta
           <p className="text-base text-bosque">{state.message}</p>
         </div>
       )}
-      {state.kind === 'ready' && <SavedScan detail={state.detail} />}
+      {state.kind === 'ready' && <SavedScan detail={state.detail} favorites={favorites} />}
 
       <div className="mt-auto flex flex-col gap-3">
         {state.kind === 'error' && state.retryable && (
@@ -95,7 +104,17 @@ function toErrorState(err: unknown): DetailState {
   return { kind: 'error', message: errorMessage(code), retryable: true };
 }
 
-function SavedScan({ detail }: { detail: HistoryDetail }) {
+/** `ideaId → favoriteId` de las ideas guardadas que trae el detalle (HU-12). */
+function favoriteEntries(detail: HistoryDetail): Record<string, string | null> {
+  if (detail.mode !== 'upcycle' || !detail.result.canUpcycle) return {};
+  const entries: Record<string, string | null> = {};
+  for (const { ideaId, favoriteId } of detail.result.ideas) {
+    if (ideaId && favoriteId !== undefined) entries[ideaId] = favoriteId;
+  }
+  return entries;
+}
+
+function SavedScan({ detail, favorites }: { detail: HistoryDetail; favorites: FavoritesApi }) {
   const navigate = useNavigate();
   return (
     <>
@@ -122,6 +141,7 @@ function SavedScan({ detail }: { detail: HistoryDetail }) {
         ) : (
           <UpcycleResultView
             result={detail.result}
+            favorites={favorites}
             onOpenIdea={(ideaIndex) => {
               const state = chatState(detail, ideaIndex);
               if (state) navigate('/chat', { state });

@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import type { RequestOptions, ScanRequestInput } from '../../api/client';
 import { ApiError, errorMessage, type ApiErrorCode } from '../../api/errors';
+import { useAuthStore } from '../auth/authStore';
 import { usePhotoStore, type ScanResponses, type StoredPhoto } from '../camera/photoStore';
 import type { ScanMode } from '../camera/scanModeStore';
 
 export type ScanState<T> =
   | { kind: 'loading' }
-  | { kind: 'success'; data: T }
+  /** `withSession`: si la petición salió con sesión (HU-12: aviso de escaneo no guardado). */
+  | { kind: 'success'; data: T; withSession: boolean }
   | { kind: 'error'; code: ApiErrorCode; message: string };
 
 export type ScanRequest<T> = (req: ScanRequestInput, opts?: RequestOptions) => Promise<T>;
@@ -33,12 +35,13 @@ export function useScan<M extends ScanMode>(mode: M, request: ScanRequest<ScanRe
     if (!retried && cachedFor(mode, photo)) return;
     const controller = new AbortController();
     controllerRef.current = controller;
+    const withSession = useAuthStore.getState().session !== null;
     request({ image: photo.base64, mimeType: photo.mimeType }, { signal: controller.signal }).then(
       // Una respuesta tardía de una petición cancelada (reintento, salida) no pisa el estado actual.
       (data) => {
         if (controller.signal.aborted) return;
-        saveResult(mode, photo.id, data);
-        setState({ kind: 'success', data });
+        saveResult(mode, photo.id, data, withSession);
+        setState({ kind: 'success', data, withSession });
       },
       (err: unknown) => {
         if (controller.signal.aborted) return;
@@ -63,15 +66,17 @@ export function useScan<M extends ScanMode>(mode: M, request: ScanRequest<ScanRe
   return { photo, state, retry, backToCamera };
 }
 
-function cachedFor<M extends ScanMode>(mode: M, photo: StoredPhoto): ScanResponses[M] | null {
+function cachedFor<M extends ScanMode>(mode: M, photo: StoredPhoto) {
   const cached = usePhotoStore.getState().results[mode];
-  return cached?.photoId === photo.id ? cached.data : null;
+  return cached?.photoId === photo.id ? cached : null;
 }
 
 function initialState<M extends ScanMode>(
   mode: M,
   photo: StoredPhoto | null,
 ): ScanState<ScanResponses[M]> {
-  const data = photo && cachedFor(mode, photo);
-  return data ? { kind: 'success', data } : { kind: 'loading' };
+  const cached = photo && cachedFor(mode, photo);
+  return cached
+    ? { kind: 'success', data: cached.data, withSession: cached.withSession ?? false }
+    : { kind: 'loading' };
 }

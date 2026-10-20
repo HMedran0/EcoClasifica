@@ -255,6 +255,45 @@ describe('api.history (HU-13)', () => {
   });
 });
 
+describe('api.favorites (HU-12)', () => {
+  const IDEA_ID = '1f8d4c2b-3a5e-4d7f-8b9c-2e3f4a5b6c7d';
+  const FAVORITE_ID = '7a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d';
+  const favorite = {
+    id: FAVORITE_ID,
+    ideaId: IDEA_ID,
+    objectName: 'Frasco',
+    difficulty: 'Fácil',
+    title: 'Portalápices',
+    description: 'd',
+    extraMaterials: [],
+    createdAt: '2026-10-20T12:00:00+00:00',
+  };
+
+  it('addFavorite envía solo el ideaId por POST y valida la respuesta', async () => {
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(201, favorite));
+    await expect(client(fetchFn).addFavorite(IDEA_ID)).resolves.toEqual(favorite);
+    const [url, init] = fetchFn.mock.calls[0]!;
+    expect(url).toBe('https://api.test/api/v1/favorites');
+    expect(init?.method).toBe('POST');
+    expect(JSON.parse(String(init?.body))).toEqual({ ideaId: IDEA_ID });
+  });
+
+  it('removeFavorite usa DELETE y acepta el 204 sin cuerpo', async () => {
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(new Response(null, { status: 204 }));
+    await expect(client(fetchFn).removeFavorite(FAVORITE_ID)).resolves.toBeUndefined();
+    const [url, init] = fetchFn.mock.calls[0]!;
+    expect(url).toBe(`https://api.test/api/v1/favorites/${FAVORITE_ID}`);
+    expect(init?.method).toBe('DELETE');
+  });
+
+  it('removeFavorite traduce el 404 a NOT_FOUND', async () => {
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(jsonResponse(404, { error: { code: 'NOT_FOUND', message: 'x' } }));
+    expect((await apiErrorOf(client(fetchFn).removeFavorite(FAVORITE_ID))).code).toBe('NOT_FOUND');
+  });
+});
+
 describe('Authorization', () => {
   const headersOf = (fetchFn: ReturnType<typeof vi.fn<typeof fetch>>) =>
     new Headers(fetchFn.mock.calls[0]![1]!.headers);

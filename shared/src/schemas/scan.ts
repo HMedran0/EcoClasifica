@@ -66,6 +66,8 @@ export const ideaSchema = z.object({
     .max(UPCYCLE_IDEAS_COUNT - 1),
   /** Solo si el escaneo se guardó (id en `scan_ideas`, para favoritos y chat). */
   ideaId: z.string().uuid().optional(),
+  /** Solo en GET /history/:id: id del favorito del usuario, o `null` si no la guardó (HU-12). */
+  favoriteId: z.string().uuid().nullable().optional(),
   title: z.string().max(UPCYCLE_TITLE_MAX),
   description: z.string().max(UPCYCLE_DESCRIPTION_MAX),
   extraMaterials: z.array(z.string()).max(UPCYCLE_EXTRA_MATERIALS_MAX),
