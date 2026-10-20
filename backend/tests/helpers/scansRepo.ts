@@ -64,8 +64,20 @@ export function storedScan(userId: string, overrides: Partial<StoredScan> = {}):
  * Repositorio en memoria que respeta el contrato de `ScansRepo`: filtra por usuario y ordena
  * por `createdAt` desc y luego `id` desc, igual que la consulta real.
  */
-export function memoryScansRepo(initial: StoredScan[] = []) {
+export function memoryScansRepo(
+  initial: StoredScan[] = [],
+  /** Simula las cascadas de la base al borrar filas (ideas, favoritos, mensajes). */
+  onDelete: (scanIds: string[]) => void = () => undefined,
+) {
   const rows = [...initial];
+  /** Contenido del bucket: una imagen por escaneo que la tenga. */
+  const images = new Set(initial.flatMap((row) => (row.imagePath ? [row.imagePath] : [])));
+  const removeRows = (match: (row: StoredScan) => boolean) => {
+    const gone = rows.filter(match);
+    for (const row of gone) rows.splice(rows.indexOf(row), 1);
+    if (gone.length > 0) onDelete(gone.map((row) => row.id));
+    return gone;
+  };
   const visible = (userId: string) =>
     rows
       .filter((row) => row.userId === userId)
@@ -81,6 +93,7 @@ export function memoryScansRepo(initial: StoredScan[] = []) {
 
   const repo = {
     rows,
+    images,
     save: vi.fn<ScansRepo['save']>(async (scan: NewScan) => {
       rows.push({
         id: scan.id,
@@ -90,6 +103,7 @@ export function memoryScansRepo(initial: StoredScan[] = []) {
         imagePath: scanImagePath(scan.userId, scan.id),
         saved: scan.saved,
       });
+      images.add(scanImagePath(scan.userId, scan.id));
     }),
     list: vi.fn<ScansRepo['list']>(async (userId, { offset, limit }) =>
       visible(userId)
@@ -105,6 +119,16 @@ export function memoryScansRepo(initial: StoredScan[] = []) {
     signImageUrls: vi.fn<ScansRepo['signImageUrls']>(async (paths) =>
       paths.map((path) => `https://firmado.test/${path}?token=t`),
     ),
+    deleteById: vi.fn<ScansRepo['deleteById']>(async (userId, scanId) => {
+      const [row] = removeRows((r) => r.userId === userId && r.id === scanId);
+      return row ? { imagePath: row.imagePath } : null;
+    }),
+    deleteAll: vi.fn<ScansRepo['deleteAll']>(async (userId) =>
+      removeRows((r) => r.userId === userId).map(({ id, imagePath }) => ({ id, imagePath })),
+    ),
+    removeImages: vi.fn<ScansRepo['removeImages']>(async (paths) => {
+      for (const path of paths) images.delete(path);
+    }),
   };
   return repo satisfies ScansRepo;
 }

@@ -11,11 +11,13 @@ import {
   type Favorite,
   type FavoritesListResponse,
   healthResponseSchema,
+  deleteHistoryResponseSchema,
   historyDetailSchema,
   historyListResponseSchema,
   type HistoryDetail,
   type HistoryListResponse,
   type ClassifyResponse,
+  type DeleteHistoryResponse,
   type HealthResponse,
   type scanRequestSchema,
   type UpcycleResponse,
@@ -132,6 +134,18 @@ export function createApiClient({
         historyDetailSchema,
         opts,
       ),
+    /** HU-14: borra un escaneo propio y su imagen (204 sin cuerpo). */
+    deleteHistoryItem: async (id: string, opts?: RequestOptions): Promise<void> => {
+      await request(
+        `/api/v1/history/${encodeURIComponent(id)}`,
+        { method: 'DELETE' },
+        z.unknown(),
+        opts,
+      );
+    },
+    /** HU-14: borra todo el historial del usuario; responde cuántos escaneos se borraron. */
+    deleteHistory: (opts?: RequestOptions): Promise<DeleteHistoryResponse> =>
+      request('/api/v1/history', { method: 'DELETE' }, deleteHistoryResponseSchema, opts),
     /** HU-15: una página de favoritos (requiere sesión). */
     favorites: (page: number, opts?: RequestOptions): Promise<FavoritesListResponse> =>
       request(

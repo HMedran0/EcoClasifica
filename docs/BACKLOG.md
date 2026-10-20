@@ -19,7 +19,7 @@ Estados: Pendiente · En curso · Hecha. Prioridad: M = MVP, D = deseable. Cada 
 | HU-11 | Chat paso a paso                                                                      | M    | F3   | Hecha     |
 | HU-12 | Guardar como favorita                                                                 | D    | F4   | Hecha     |
 | HU-13 | Ver mi historial                                                                      | M    | F4   | Hecha     |
-| HU-14 | Eliminar registros                                                                    | D    | F4   | Pendiente |
+| HU-14 | Eliminar registros                                                                    | D    | F4   | Hecha     |
 | HU-15 | Ver mis favoritos                                                                     | M    | F4   | Hecha     |
 | HU-16 | Estadísticas personales                                                               | D    | F4   | Pendiente |
 | HU-17 | Pantalla de resultado (UI de HU-05, HU-06 y HU-07)                                    | M    | F2   | Hecha     |
@@ -40,7 +40,9 @@ Orden de F2: `chore/F2-base` ✅ (proyecto Vite + Tailwind, workspace) → despl
 
 Orden de F3: HU-09 (`POST /scan/upcycle` e ideas) ✅ → HU-03 (interruptor de modo) ✅ → HU-10 ✅ → HU-11 ✅ → mejora HU-18 ✅. **Criterio de salida cumplido (2026-10-19):** Flujo B completo con chat en Android real (frasco y botella con 3 ideas, cargador sin ideas → «Ver dónde depositarlo», idea → chat en pasos con hilo conservado), botón «Instalar app» verificado en escritorio, CI verde.
 
-Orden de F4: HU-04 ✅ → HU-13 ✅ → HU-12 (guardar favorita) ✅ → HU-15 (ver favoritos y chat persistente) ✅ → HU-14 (eliminar; debe comprobar que los favoritos se conservan) → HU-16.
+Orden de F4: HU-04 ✅ → HU-13 ✅ → HU-12 (guardar favorita) ✅ → HU-15 (ver favoritos y chat persistente) ✅ → HU-14 (eliminar; favoritos conservados con `ideaId` null) ✅ → HU-16.
+
+Pendiente para F5 (mantenimiento): script que borre de `scan-images` las imágenes sin fila en `scans` (huérfanas cuando falla borrar la imagen en HU-14; los `warn` «pendiente de limpiar» dan los `scanId`).
 
 Después del MVP: empaquetado con Capacitor y publicación en Google Play.
 
