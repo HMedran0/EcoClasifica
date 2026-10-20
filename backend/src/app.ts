@@ -5,7 +5,7 @@ import helmet from 'helmet';
 import { pinoHttp } from 'pino-http';
 import { env } from './config/env';
 import { errorHandler, notFound } from './middlewares/errorHandler';
-import { createScanLimiter } from './middlewares/rateLimit';
+import { createChatLimiter, createScanLimiter } from './middlewares/rateLimit';
 import {
   createSupabaseDisposalRulesRepo,
   type DisposalRulesRepo,
@@ -43,6 +43,9 @@ export function createApp(deps: AppDeps = {}) {
   );
   // Antes del parser: se rechaza el exceso sin leer ni parsear hasta 6 MB por petición.
   app.use('/api/v1/scan', createScanLimiter());
+  app.use('/api/v1/chat', createChatLimiter());
+  // El chat es solo texto (≤ 50 mensajes de 1 000 caracteres): no necesita el límite de 6 MB.
+  app.use('/api/v1/chat', express.json({ limit: '64kb' }));
   // 6 MB: la imagen (≤ 4 MB) viaja en Base64, que pesa ~33 % más.
   app.use(express.json({ limit: '6mb' }));
 

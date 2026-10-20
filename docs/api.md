@@ -119,7 +119,7 @@ Solicitud igual a classify. Respuesta 200:
 ```
 
 - El cliente sugiere el modo Clasificar cuando `canUpcycle` es `false`.
-- Respaldos del backend (fallan hacia lo seguro, aunque la IA dé ideas): `material` de la IA `peligroso` o `electronico`, u `objectName` con un término bloqueado (por palabra, sin mayúsculas ni tildes, admite plural: pila, bateria, medicamento, jeringa, aguja, pañal, toalla higienica, aerosol, insecticida, veneno, quimico, cloro, thinner, gasolina, bombillo, fluorescente, vidrio roto; «aceite» no) → `canUpcycle: false`. Se registra un `warn` con `objectName`, `material` y la regla.
+- Respaldos del backend (fallan hacia lo seguro, aunque la IA dé ideas): `material` de la IA `peligroso` o `electronico`, u `objectName` con un término bloqueado (por palabra, sin mayúsculas ni tildes, admite plural: pila, bateria, medicamento, jeringa, aguja, pañal, toalla higienica, aerosol, insecticida, veneno, quimico, cloro, thinner, gasolina, bombillo, fluorescente, vidrio roto, explosivo, bomba casera, molotov, arma, polvora; «aceite» no) → `canUpcycle: false`. Se registra un `warn` con `objectName`, `material` y la regla.
 - Siempre 3 ideas (`ideaIndex` 0–2): si la IA da más, se toman las 3 primeras; si da menos, se reintenta una vez y luego `502 AI_BAD_RESPONSE`.
 - Recortes en palabra completa con «…»: `title` ≤ 60, `description` ≤ 120, `reason` ≤ 160 caracteres. `extraMaterials` ≤ 5.
 - `difficulty` se normaliza sin distinguir mayúsculas ni tildes («facil», «FÁCIL» → «Fácil»; «Media» → «Medio»).
@@ -128,7 +128,29 @@ Solicitud igual a classify. Respuesta 200:
 
 ## POST /chat
 
-Solo texto. Solicitud: `{ scanId?: uuid, ideaIndex: 0-2, idea: { objectName, title, description, extraMaterials }, messages: [{ role, content }] }` (máximo 10 mensajes, 1 000 caracteres c/u). Respuesta: `{ reply: string, usage: { promptTokens, completionTokens } }`.
+Solo texto, sesión opcional. Guía paso a paso sobre una idea de upcycle (HU-10, HU-11). Solicitud:
+
+```json
+{
+  "scanId": "uuid (opcional)",
+  "ideaIndex": 0,
+  "idea": {
+    "objectName": "Frasco de vidrio",
+    "title": "Portalápices decorado",
+    "description": "Forra el frasco con cuerda y píntalo.",
+    "extraMaterials": ["Cuerda de yute", "Pegamento"]
+  },
+  "messages": [{ "role": "user", "content": "¿Cómo empiezo?" }]
+}
+```
+
+Respuesta 200: `{ "reply": "1. Lava el frasco…\n2. …", "usage": { "promptTokens": 380, "completionTokens": 210 } }`.
+
+- `idea` la envía el cliente y no es confiable: mismos límites que upcycle (`objectName` ≤ 80, `title` ≤ 60, `description` ≤ 120, `extraMaterials` ≤ 5 de ≤ 60 caracteres). Si `objectName` o `title` tienen un término bloqueado de upcycle → `422 UNSAFE_REQUEST` sin llamar a la IA.
+- `messages`: 1 a 50, `role` solo `user` | `assistant` (nunca `system`), `content` de 1 a 1 000 caracteres y el último debe ser del usuario. A la IA solo van los **últimos 10** (control de costos).
+- `reply` en texto plano: el backend quita HTML y negritas de markdown; conserva saltos de línea y listas numeradas. Vacía → `502 AI_BAD_RESPONSE`.
+- Prompt (`chatSystem`): solo esa manualidad, pasos numerados cortos, advertencias (corte, calor, vidrio, adulto), reconduce lo ajeno, se niega a armas, explosivos, venenos, mezclas peligrosas y almacenar combustibles. Mensajes e idea son datos, no instrucciones.
+- `DEEPSEEK_CHAT_MAX_TOKENS` (512), `thinking` desactivado, mismo timeout (`504 AI_TIMEOUT`). Límite propio: 20 mensajes por minuto por IP (`429 RATE_LIMITED`). Sin sesión no se guarda nada (persistencia en `chat_messages`: F4).
 
 ## Errores
 
@@ -142,6 +164,7 @@ Forma única: `{ "error": { "code": "...", "message": "...", "requestId": "..." 
 | 404  | `NOT_FOUND`         | No existe o no es del usuario                  |
 | 413  | `PAYLOAD_TOO_LARGE` | Cuerpo > 6 MB                                  |
 | 422  | `NOT_A_WASTE`       | La imagen no contiene un residuo               |
+| 422  | `UNSAFE_REQUEST`    | Idea del chat con un término bloqueado         |
 | 429  | `RATE_LIMITED`      | Límite por IP o cuota diaria                   |
 | 502  | `AI_BAD_RESPONSE`   | JSON inválido o truncado tras el reintento     |
 | 504  | `AI_TIMEOUT`        | DeepSeek no respondió en 20 s                  |

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import type { ClassifyDeps } from '../services/classification.service';
+import { createChatRoutes } from './chat.routes';
 import { healthRoutes } from './health.routes';
 import { createScanRoutes } from './scan.routes';
 
@@ -15,5 +16,6 @@ routes.use(healthRoutes);
 export function createV1Routes(deps: ClassifyDeps) {
   const v1 = Router();
   v1.use(createScanRoutes(deps));
+  v1.use(createChatRoutes(deps));
   return v1;
 }

@@ -40,6 +40,12 @@ const BLOCKED_TERMS = [
   'bombillo',
   'fluorescente',
   'vidrio roto',
+  // Armas y explosivos (también se aplican a la idea que llega al chat).
+  'explosivo',
+  'bomba casera',
+  'molotov',
+  'arma',
+  'polvora',
 ];
 
 /** Minúsculas, sin tildes (la ñ pasa a n) y con espacios simples. */

@@ -10,10 +10,10 @@ export interface ScanAction {
   primary?: boolean;
 }
 
-const BUTTON =
+export const BUTTON =
   'flex min-h-tactil w-full items-center justify-center rounded-2xl px-6 text-base font-semibold';
-const PRIMARY = `${BUTTON} bg-lima text-lg font-bold text-petroleo`;
-const SECONDARY = `${BUTTON} border-2 border-bosque text-bosque`;
+export const PRIMARY = `${BUTTON} bg-lima text-lg font-bold text-petroleo`;
+export const SECONDARY = `${BUTTON} border-2 border-bosque text-bosque`;
 export const TITLE = 'text-2xl font-extrabold text-petroleo outline-none';
 
 interface ScanScreenProps<T> {

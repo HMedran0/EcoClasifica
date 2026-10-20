@@ -13,6 +13,7 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   NOT_FOUND: 'No encontramos lo que buscabas.',
   PAYLOAD_TOO_LARGE: 'La foto es demasiado grande. Toma otra.',
   NOT_A_WASTE: 'No encontramos un residuo en la foto. Intenta con otra.',
+  UNSAFE_REQUEST: 'Esa idea no es segura y no podemos guiarte con ella. Elige otra idea.',
   RATE_LIMITED: 'Hiciste muchos escaneos seguidos. Espera un minuto e intenta de nuevo.',
   AI_BAD_RESPONSE: 'No pudimos analizar la foto. Intenta de nuevo.',
   AI_TIMEOUT: 'El análisis tardó demasiado. Intenta de nuevo.',

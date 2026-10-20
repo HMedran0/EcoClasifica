@@ -94,7 +94,7 @@ beforeEach(() => {
 });
 
 describe('IdeasPage', () => {
-  it('muestra objeto, dificultad y 3 ideas no interactivas', async () => {
+  it('muestra objeto, dificultad y 3 ideas como botones', async () => {
     const upcycle = vi.fn().mockResolvedValue(ideas);
     renderPage(upcycle);
     expect(
@@ -105,12 +105,13 @@ describe('IdeasPage', () => {
 
     const cards = within(liveRegion()).getAllByRole('listitem');
     expect(cards).toHaveLength(3);
-    expect(within(cards[0]!).getByRole('heading', { name: 'Portalápices' })).toBeInTheDocument();
+    const buttons = within(liveRegion()).getAllByRole('button');
+    expect(buttons).toHaveLength(3);
+    expect(buttons[0]).toHaveAccessibleName('Portalápices');
+    expect(buttons[0]).toHaveAccessibleDescription('Decóralo. Necesitas además: Pintura');
     expect(cards[0]).toHaveTextContent('Necesitas además: Pintura');
     expect(cards[1]).not.toHaveTextContent('Necesitas además');
     expect(cards[2]).toHaveTextContent('Luces LED, Cinta');
-    expect(screen.getAllByText('Pronto: guía paso a paso')).toHaveLength(3);
-    expect(within(liveRegion()).queryByRole('button')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Escanear otro residuo' })).toBeInTheDocument();
     expect(upcycle).toHaveBeenCalledWith(
       { image: storedPhoto.base64, mimeType: 'image/jpeg' },

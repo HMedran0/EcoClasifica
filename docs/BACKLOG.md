@@ -15,8 +15,8 @@ Estados: Pendiente · En curso · Hecha. Prioridad: M = MVP, D = deseable. Cada 
 | HU-07 | Baja certeza y alternativas (no-residuo ya en HU-05)                                  | M    | F1   | Hecha     |
 | HU-08 | Corregir el resultado                                                                 | D    | F4   | Pendiente |
 | HU-09 | Recibir ideas de upcycle                                                              | M    | F3   | Hecha     |
-| HU-10 | Elegir una alternativa                                                                | M    | F3   | Pendiente |
-| HU-11 | Chat paso a paso                                                                      | M    | F3   | Pendiente |
+| HU-10 | Elegir una alternativa                                                                | M    | F3   | Hecha     |
+| HU-11 | Chat paso a paso                                                                      | M    | F3   | Hecha     |
 | HU-12 | Guardar como favorita                                                                 | D    | F4   | Pendiente |
 | HU-13 | Ver mi historial                                                                      | M    | F4   | Pendiente |
 | HU-14 | Eliminar registros                                                                    | D    | F4   | Pendiente |
