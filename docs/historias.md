@@ -35,6 +35,14 @@ Como usuario, quiero registrarme con un correo válido y verificable, o entrar c
 - Dado que me registro con correo, entonces debo verificarlo antes de iniciar sesión; con Google no se pide verificación adicional.
 - Dado que inicio sesión, entonces mis datos solo son accesibles para mí (RLS).
 
+## HU-19 (M) Recuperar contraseña
+
+Como usuario registrado con correo, quiero recuperar el acceso si olvido mi contraseña.
+
+- Dado que olvidé mi contraseña, cuando pido recuperarla con mi correo, entonces recibo un enlace para elegir una nueva.
+- El mensaje es el mismo exista o no la cuenta: no revela qué correos están registrados.
+- El enlace vuelve a la app y, tras cambiar la contraseña, inicio sesión con la nueva.
+
 ## Épica A — Modo Clasificar
 
 ## HU-05 (M) Identificar el residuo
@@ -149,8 +157,8 @@ Como usuario, quiero ver cuántos residuos he clasificado por material.
 Como responsable del piloto, quiero limitar el gasto diario en IA para que no se dispare con pocos usuarios.
 
 - Cada llamada a DeepSeek (clasificar, upcycle, chat) registra una fila en `ai_usage` con usuario (o `null` sin sesión), endpoint, tokens y latencia. Nunca la imagen ni el texto del usuario. Si registrar falla, se responde igual con un `warn`.
-- Con sesión: al superar la cuota diaria (60 escaneos y un tope de mensajes de chat, ambos configurables por variable de entorno; RNF-05) → `429` con un código nuevo en `errors.ts`, mensaje en español y la hora de reinicio (medianoche de `America/Bogota`). No se llama a la IA.
-- Sin sesión: cuota diaria por IP, más baja que la de usuario.
+- Con sesión: cuota diaria de 60 escaneos (RNF-05) y de 100 mensajes de chat, configurables por variable de entorno. Al superarla → `429` con un código nuevo en `errors.ts`, mensaje en español y la hora de reinicio (medianoche de `America/Bogota`). No se llama a la IA.
+- Sin sesión: cuota diaria por IP de escaneos y de mensajes de chat, ambas más bajas que las de usuario.
 - Tope global diario de tokens del servicio (variable de entorno): al alcanzarlo, las nuevas llamadas responden un error tipificado sin llamar a la IA y queda un `warn`. El frontend lo muestra como «Servicio en pausa por hoy».
 - Pruebas con `AiProvider` simulado: cuota por usuario, por IP, tope global, reinicio diario y aislamiento entre usuarios.
 
