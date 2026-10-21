@@ -4,34 +4,36 @@ _Actualizado: 2026-10-21 · Reescribir completo en cada `/handoff` (≤ 40 líne
 
 ## Fase actual
 
-**F4 — Cuentas: cumplida (2026-10-20).** En producción: Lighthouse móvil Performance 96 y Accesibilidad 100; manifiesto y `sw.js` correctos (Lighthouse 12 no tiene categoría PWA). Prueba manual de HU-04, HU-12, HU-13, HU-14 y HU-15 completa, con aislamiento entre dos cuentas y borrado verificado en Storage. CI de `main` en verde.
+**F5 — Lanzamiento piloto: en curso.** Criterio de salida: piloto con 5 a 10 usuarios reales en San Juan Nepomuceno sin errores bloqueantes, con gasto de IA limitado y cumpliendo la Ley 1581.
 
-**F5 — Lanzamiento piloto: empieza.** Criterio de salida: piloto con 5 a 10 usuarios reales en San Juan Nepomuceno sin errores bloqueantes, con gasto de IA limitado y cumpliendo la Ley 1581.
+Orden: `fix/arranque-config` ✅ → HU-20 (cuota diaria de IA) → HU-19 (recuperar contraseña) → HU-21 (privacidad y autorización) → HU-22 (eliminar cuenta) → `chore/F5-imagenes-huerfanas` → `chore/F5-calidad` (Lighthouse ≥ 90 en Performance y Accesibilidad).
 
-Orden: `fix/arranque-config` → HU-20 (cuota diaria de IA) → HU-19 (recuperar contraseña) → HU-21 (privacidad y autorización) → HU-22 (eliminar cuenta) → `chore/F5-imagenes-huerfanas` → `chore/F5-calidad` (Lighthouse ≥ 90 en Performance y Accesibilidad). HU-08 y HU-16 pasan a v1.1.
+## Terminado hoy: `fix/arranque-config`
+
+- Producción no arranca sin `ALLOWED_ORIGINS` o con un origen no limpio (`new URL(o).origin === o`) o sin `https` (salvo `localhost`). Solo se registran nombres de variables.
+- Logs: nivel de pino como texto (Railway solo reconoce `debug/info/warn/error`; con `50` todo salía como `info`). pino-http: 5xx → `error`, 4xx → `warn`.
+- El build de Vercel exige `VITE_API_URL` con `https` (el `localhost` del CI se permite).
+- Vitest 5.0.5 único en el monorepo. `scripts/vitest.mjs` lanza Vitest desde su ruta canónica: con `c:\` en minúscula cargaba dos copias de sí mismo (no era la versión).
+- Foco del título en `ScanScreen` con `useLayoutEffect` (prueba intermitente de `ResultPage`).
 
 ## Tareas manuales del responsable (F5)
 
-SMTP propio en Supabase Auth · dominio y publicación de la app de Google OAuth · validación de reglas de contenedores con la alcaldía · validación del texto de privacidad · ejecución del piloto.
-
-## Decisiones
-
-- Sin ADR nuevo. Las historias HU-20, HU-21 y HU-22 tienen sección en `historias.md`. HU-19 sube a prioridad M (necesaria para el piloto) y todavía no tiene sección.
+Ver `docs/BACKLOG.md` (tareas manuales de F5) y `docs/despliegue.md`.
 
 ## Problemas abiertos
 
 1. **Supabase:** las Redirect URLs deben llevar `/**`. En Railway, borrar `SUPABASE_JWT_SECRET` si existe.
-2. PKCE: el enlace de verificación abierto en otro navegador no deja la sesión iniciada.
-3. Offline en `/camara`, `/resultado`, `/ideas`, `/chat`, `/historial` y `/favoritos`: solo el banner.
-4. Solo en desarrollo: StrictMode duplica peticiones al montar `/resultado` o `/ideas`.
-5. Prueba intermitente del frontend (foco en `ResultPage`).
-6. Vitest backend (v2) vs frontend (v5): con la unidad en minúscula (`c:\…`) fallan los del frontend.
-7. Logo oficial y normativa de contenedores de San Juan Nepomuceno sin confirmar (tarea manual).
-8. `/chat` acepta `scanId` sin verificar su dueño (solo métricas; revisar en HU-20 al registrar `ai_usage`).
-9. «Guardar este escaneo» vuelve a llamar a la IA (otro costo; cuenta para la cuota de HU-20).
-10. Chat: «Reintentar» tras un aborto puede duplicar la pregunta en el hilo guardado.
-11. `ConfirmDialog` importa estilos de `features/scan/ScanScreen` (mover a un módulo compartido).
+2. **Railway:** tras desplegar, confirmar que `ALLOWED_ORIGINS` es exactamente `https://eco-clasifica.vercel.app` (si no, ya no arranca) y que `@level:error` filtra.
+3. PKCE: el enlace de verificación abierto en otro navegador no deja la sesión iniciada.
+4. Offline en `/camara`, `/resultado`, `/ideas`, `/chat`, `/historial` y `/favoritos`: solo el banner.
+5. Solo en desarrollo: StrictMode duplica peticiones al montar `/resultado` o `/ideas`.
+6. Logo oficial y normativa de contenedores de San Juan Nepomuceno sin confirmar (tarea manual).
+7. `/chat` acepta `scanId` sin verificar su dueño (revisar en HU-20 al registrar `ai_usage`).
+8. «Guardar este escaneo» vuelve a llamar a la IA (cuenta para la cuota de HU-20).
+9. Chat: «Reintentar» tras un aborto puede duplicar la pregunta en el hilo guardado.
+10. `ConfirmDialog` importa estilos de `features/scan/ScanScreen` (mover a un módulo compartido).
+11. Duplicado menor de Vite (8.3.4 frontend, 8.3.5 backend vía Vitest); sin impacto.
 
 ## Siguiente acción
 
-Retomar la rama `fix/arranque-config` (pendiente desde F3): revisar qué contiene frente a `main`, terminarla, pasar `npm run check` y fusionarla. Luego `/story HU-20`.
+`/story HU-20` en la rama `feat/HU-20-cuota-ia`.
