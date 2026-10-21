@@ -142,6 +142,38 @@ Como usuario, quiero una lista de ideas guardadas con acceso a retomar el chat.
 
 Como usuario, quiero ver cuántos residuos he clasificado por material.
 
+## Épica P — Lanzamiento piloto
+
+## HU-20 (M) Cuota diaria de IA
+
+Como responsable del piloto, quiero limitar el gasto diario en IA para que no se dispare con pocos usuarios.
+
+- Cada llamada a DeepSeek (clasificar, upcycle, chat) registra una fila en `ai_usage` con usuario (o `null` sin sesión), endpoint, tokens y latencia. Nunca la imagen ni el texto del usuario. Si registrar falla, se responde igual con un `warn`.
+- Con sesión: al superar la cuota diaria (60 escaneos y un tope de mensajes de chat, ambos configurables por variable de entorno; RNF-05) → `429` con un código nuevo en `errors.ts`, mensaje en español y la hora de reinicio (medianoche de `America/Bogota`). No se llama a la IA.
+- Sin sesión: cuota diaria por IP, más baja que la de usuario.
+- Tope global diario de tokens del servicio (variable de entorno): al alcanzarlo, las nuevas llamadas responden un error tipificado sin llamar a la IA y queda un `warn`. El frontend lo muestra como «Servicio en pausa por hoy».
+- Pruebas con `AiProvider` simulado: cuota por usuario, por IP, tope global, reinicio diario y aislamiento entre usuarios.
+
+## HU-21 (M) Privacidad y autorización de datos
+
+Como usuario, quiero saber qué datos se guardan y autorizar su uso antes de registrarme (Ley 1581 de 2012 y Decreto 1377 de 2013).
+
+- `/privacidad` es accesible sin sesión desde la portada y el registro. Incluye: responsable y contacto, finalidades, datos tratados (correo, fotos, escaneos, favoritos, chats), encargados y transferencia internacional (Supabase, DeepSeek, Vercel, Railway), derechos del titular (conocer, actualizar, rectificar, suprimir, revocar) y cómo ejercerlos.
+- El registro con correo y con Google exige una autorización previa, expresa e informada: casilla sin marcar por defecto y enlace a la política. Sin marcarla no se crea la cuenta.
+- Queda prueba de la autorización: versión de la política y fecha en el perfil (migración nueva). Si cambia la versión, se vuelve a pedir al iniciar sesión.
+- Sin sesión, antes del primer escaneo hay un aviso breve: la foto se envía a un proveedor de IA y no se guarda.
+- El texto de la política lo valida una persona responsable (alcaldía o asesoría) antes del piloto. Es tarea manual y no bloquea el código.
+
+## HU-22 (M) Eliminar mi cuenta
+
+Como usuario, quiero eliminar mi cuenta y todos mis datos (derecho de supresión).
+
+- «Eliminar mi cuenta» en el perfil, con `ConfirmDialog`: «¿Eliminar tu cuenta? Se borrarán tus escaneos, fotos, favoritos y conversaciones. No se puede deshacer.»
+- `DELETE /api/v1/me` (`requireAuth`): borra las imágenes de `scan-images` del usuario y después el usuario de Auth. La cascada borra `profiles`, `scans`, `scan_ideas`, `favorites` y `chat_messages`; `ai_usage` queda con `user_id` null (anonimizado).
+- Si borrar las imágenes falla, la cuenta no se elimina y se muestra un error para reintentar. No quedan fotos de una cuenta borrada.
+- Al terminar: cierra la sesión, limpia los stores en memoria y vuelve a la portada con el aviso «Cuenta eliminada».
+- Pruebas: aislamiento (solo se borra la propia cuenta), orden imágenes → Auth, fallo de Storage sin borrado parcial, y que la política de privacidad (HU-21) describe este proceso.
+
 ## RNF — Requerimientos no funcionales
 
 | Código | Requisito                    | Meta                                                                                                                   |
