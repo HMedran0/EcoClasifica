@@ -41,24 +41,27 @@ export const envSchema = z.object({
   SUPABASE_URL: supabaseUrlSchema.optional(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
 
+  // Sin valor por defecto: en producción su ausencia aborta el arranque (ver productionConfigErrors).
   ALLOWED_ORIGINS: z
     .string()
-    .default('http://localhost:5173')
+    .optional()
     .transform((v) =>
       v
-        .split(',')
+        ?.split(',')
         .map((s) => s.trim())
         .filter(Boolean),
     ),
   DEFAULT_MUNICIPALITY_CODE: z.string().default('13657'),
 });
 
-// Una variable vacía (`KEY=` copiada de .env.example) cuenta como no definida.
-const definedVars = Object.fromEntries(
-  Object.entries(process.env).filter(([, value]) => value !== ''),
-);
+/** Una variable vacía (`KEY=` copiada de .env.example) cuenta como no definida. */
+export function definedVars(vars: NodeJS.ProcessEnv): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(vars).filter((entry): entry is [string, string] => !!entry[1]),
+  );
+}
 
-export const env = envSchema.parse(definedVars);
+export const env = envSchema.parse(definedVars(process.env));
 export type Env = typeof env;
 
 /** Opcionales en desarrollo y pruebas, pero sin ellas producción solo responde 500 al escanear. */
@@ -68,10 +71,35 @@ export const PRODUCTION_REQUIRED_VARS = [
   'SUPABASE_SERVICE_ROLE_KEY',
 ] as const;
 
-/** Nombres (nunca valores) de las variables obligatorias que faltan; vacío fuera de producción. */
-export function missingProductionVars(config: Env): string[] {
-  if (config.NODE_ENV !== 'production') return [];
-  return PRODUCTION_REQUIRED_VARS.filter((key) => !config[key]);
+/** Solo para desarrollo y pruebas: en producción ALLOWED_ORIGINS es obligatoria. */
+export const DEV_ALLOWED_ORIGINS = ['http://localhost:5173'];
+
+export function allowedOrigins(config: Env): string[] {
+  return config.ALLOWED_ORIGINS?.length ? config.ALLOWED_ORIGINS : DEV_ALLOWED_ORIGINS;
+}
+
+/** Origen limpio (sin `/` final, ruta ni espacios) y con https, salvo `localhost` (no 127.0.0.1 ni [::1]). */
+export function isValidOrigin(origin: string): boolean {
+  if (!URL.canParse(origin)) return false;
+  const url = new URL(origin);
+  if (url.origin !== origin) return false;
+  return url.protocol === 'https:' || url.hostname === 'localhost';
+}
+
+export interface ProductionConfigErrors {
+  missing: string[];
+  invalid: string[];
+}
+
+/** Nombres (nunca valores) de las variables que faltan o son inválidas; vacío fuera de producción. */
+export function productionConfigErrors(config: Env): ProductionConfigErrors {
+  if (config.NODE_ENV !== 'production') return { missing: [], invalid: [] };
+  const missing: string[] = PRODUCTION_REQUIRED_VARS.filter((key) => !config[key]);
+  const invalid: string[] = [];
+  const origins = config.ALLOWED_ORIGINS;
+  if (!origins?.length) missing.push('ALLOWED_ORIGINS');
+  else if (!origins.every(isValidOrigin)) invalid.push('ALLOWED_ORIGINS');
+  return { missing, invalid };
 }
 
 /** Devuelve el valor de una variable opcional o falla con un mensaje claro al usarla. */

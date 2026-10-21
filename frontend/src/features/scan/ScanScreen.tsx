@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useLayoutEffect, useRef, type ReactNode } from 'react';
 import type { ApiErrorCode } from '../../api/errors';
 import { ModeBadge } from '../camera/ModeSwitch';
 import type { ScanMode } from '../camera/scanModeStore';
@@ -38,7 +38,8 @@ export function ScanScreen<T>({
   const mainRef = useRef<HTMLElement>(null);
 
   // Al cambiar de estado los botones se reemplazan: el foco pasa al título para no perderse en `body`.
-  useEffect(() => {
+  // Layout y no pasivo: el foco se fija en el mismo commit que pinta el título (sin carrera en pruebas).
+  useLayoutEffect(() => {
     mainRef.current?.querySelector<HTMLElement>('h1')?.focus();
   }, [state.kind]);
 

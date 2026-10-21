@@ -44,7 +44,7 @@ function setup(scansRepo: ScansRepoFake, extra: Parameters<typeof createApp>[0] 
     logger: createLogger('info', sink),
     ...extra,
   });
-  const warns = (msg: string) => lines.filter((l) => l.level === 40 && l.msg === msg);
+  const warns = (msg: string) => lines.filter((l) => l.level === 'warn' && l.msg === msg);
   return { app, warns };
 }
 

@@ -1,11 +1,15 @@
 import { createApp } from './app';
-import { env, missingProductionVars } from './config/env';
+import { env, productionConfigErrors } from './config/env';
 import { logger } from './utils/logger';
 
 // Aquí y no en createApp: las pruebas crean la app sin estas variables.
-const missing = missingProductionVars(env);
-if (missing.length > 0) {
-  logger.fatal({ missing }, `Faltan variables de entorno obligatorias: ${missing.join(', ')}`);
+// Solo nombres de variables: nunca sus valores.
+const { missing, invalid } = productionConfigErrors(env);
+if (missing.length > 0 || invalid.length > 0) {
+  logger.fatal(
+    { missing, invalid },
+    `Configuración inválida. Faltan: ${missing.join(', ') || '—'}. Inválidas: ${invalid.join(', ') || '—'}`,
+  );
   process.exit(1);
 }
 

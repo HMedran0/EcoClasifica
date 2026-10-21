@@ -187,7 +187,7 @@ describe('filas con resultado inválido', () => {
     const warn = lines
       .map((line) => JSON.parse(line) as Record<string, unknown>)
       .find((entry) => entry.msg === 'Escaneo con resultado inválido omitido del historial');
-    expect(warn).toMatchObject({ level: 40, scanId: corrupt!.id });
+    expect(warn).toMatchObject({ level: 'warn', scanId: corrupt!.id });
     expect(Object.keys(warn ?? {})).not.toContain('objectName');
     expect(JSON.stringify(warn)).not.toContain(USER_A);
   });

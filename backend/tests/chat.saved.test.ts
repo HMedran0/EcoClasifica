@@ -164,7 +164,7 @@ describe('POST /api/v1/chat con sesión e ideaId', () => {
     expect(res.body.reply).toBe('Lava el frasco.');
     const entries = lines.map((line) => JSON.parse(line) as Record<string, unknown>);
     expect(entries.find((e) => e.msg === 'No se pudo guardar el chat')).toMatchObject({
-      level: 40,
+      level: 'warn',
     });
     const all = lines.join('\n');
     expect(all).not.toContain('Pregunta secreta');
