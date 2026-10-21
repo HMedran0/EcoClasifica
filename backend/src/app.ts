@@ -4,7 +4,7 @@ import express from 'express';
 import helmet from 'helmet';
 import type { Logger } from 'pino';
 import { pinoHttp } from 'pino-http';
-import { env } from './config/env';
+import { allowedOrigins, env } from './config/env';
 import { createAuthMiddlewares } from './middlewares/auth';
 import { errorHandler, notFound } from './middlewares/errorHandler';
 import { createChatLimiter, createScanLimiter } from './middlewares/rateLimit';
@@ -23,7 +23,7 @@ import { createV1Routes, routes } from './routes';
 import { lazyAiProvider, type AiProvider } from './services/ai';
 import { createSupabaseTokenVerifier, type TokenVerifier } from './services/auth.service';
 import { createDisposalResolver } from './services/disposal.service';
-import { logger } from './utils/logger';
+import { httpLogLevel, logger } from './utils/logger';
 
 export interface AppDeps {
   /** Proveedor de IA inyectable (simulado en pruebas). */
@@ -59,11 +59,17 @@ export function createApp(deps: AppDeps = {}) {
   app.set('trust proxy', 1);
   app.disable('x-powered-by');
 
-  app.use(pinoHttp({ logger: deps.logger ?? logger, genReqId: () => randomUUID() }));
+  app.use(
+    pinoHttp({
+      logger: deps.logger ?? logger,
+      genReqId: () => randomUUID(),
+      customLogLevel: httpLogLevel,
+    }),
+  );
   app.use(helmet());
   app.use(
     cors({
-      origin: env.ALLOWED_ORIGINS,
+      origin: allowedOrigins(env),
       methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization'],
     }),

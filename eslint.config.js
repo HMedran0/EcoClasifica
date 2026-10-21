@@ -12,8 +12,8 @@ export default tseslint.config(
     },
   },
   {
-    // Scripts de Node del frontend (p. ej. check-overflow.mjs).
-    files: ['frontend/scripts/**/*.mjs'],
+    // Scripts de Node (p. ej. scripts/vitest.mjs, frontend/scripts/check-overflow.mjs).
+    files: ['scripts/**/*.mjs', 'frontend/scripts/**/*.mjs'],
     languageOptions: { globals: { process: 'readonly', console: 'readonly' } },
   },
   {

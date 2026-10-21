@@ -39,7 +39,8 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
     appError = new AppError('VALIDATION_ERROR', 'El cuerpo de la solicitud no es JSON válido');
   } else {
     // Solo mensaje y pila: las propiedades del error podrían contener la imagen.
-    logger.error(
+    // `req.log` (pino-http) lleva el logger de la app; `logger` si el error ocurre antes de pino-http.
+    (req.log ?? logger).error(
       { error: { message: err?.message, stack: err?.stack }, requestId },
       'Error no controlado',
     );

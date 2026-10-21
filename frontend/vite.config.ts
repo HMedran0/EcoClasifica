@@ -8,11 +8,18 @@ import { manifest } from './src/pwa/manifest.ts';
 
 const SET_IN_VERCEL = 'Defínela en Vercel → Settings → Environment Variables.';
 
+/** https obligatorio (contenido mixto en Vercel); localhost se permite para el build del CI. */
+function isSecureApiUrl(value: string | undefined): boolean {
+  if (!value || !URL.canParse(value)) return false;
+  const url = new URL(value);
+  return url.protocol === 'https:' || url.hostname === 'localhost';
+}
+
 /** Sin estas variables el bundle no funcionaría en Vercel: el build de producción falla antes. */
 function assertBuildEnv(env: Record<string, string>): void {
-  if (!env.VITE_API_URL || !URL.canParse(env.VITE_API_URL)) {
+  if (!isSecureApiUrl(env.VITE_API_URL)) {
     throw new Error(
-      'VITE_API_URL debe ser la URL absoluta del backend (p. ej. https://<servicio>.up.railway.app). ' +
+      'VITE_API_URL debe ser la URL https absoluta del backend (p. ej. https://<servicio>.up.railway.app). ' +
         SET_IN_VERCEL,
     );
   }
