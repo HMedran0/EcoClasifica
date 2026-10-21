@@ -170,7 +170,7 @@ Como usuario, quiero saber qué datos se guardan y autorizar su uso antes de reg
 - El registro con correo y con Google exige una autorización previa, expresa e informada: casilla sin marcar por defecto y enlace a la política. Sin marcarla no se crea la cuenta.
 - Queda prueba de la autorización: versión de la política y fecha en el perfil (migración nueva). Si cambia la versión, se vuelve a pedir al iniciar sesión.
 - Sin sesión, antes del primer escaneo hay un aviso breve: la foto se envía a un proveedor de IA y no se guarda.
-- El texto de la política lo valida una persona responsable (alcaldía o asesoría) antes del piloto. Es tarea manual y no bloquea el código.
+- El texto de la política lo revisa el director o tutor del proyecto antes del piloto. Es tarea manual y no bloquea el código.
 
 ## HU-22 (M) Eliminar mi cuenta
 

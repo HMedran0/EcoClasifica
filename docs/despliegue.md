@@ -56,6 +56,21 @@ Cambiar una variable `VITE_*` exige redesplegar: se fijan al compilar.
 - El cliente usa PKCE: el enlace de verificación abierto en otro navegador confirma el correo, pero no deja la sesión iniciada (hay que entrar con la contraseña).
 - El backend valida el token con `getClaims`: no necesita el secreto JWT (si `SUPABASE_JWT_SECRET` sigue en Railway, bórrala).
 
+### Correo de Auth: SMTP con Gmail (F5)
+
+Sin dominio propio por ahora (proyecto universitario): el SMTP por defecto de Supabase solo envía unos pocos correos por hora, así que se usa una cuenta de Gmail.
+
+- En la cuenta de Gmail: activa la verificación en dos pasos y crea una **contraseña de aplicación** (16 caracteres). Es secreta: solo va en Supabase, nunca en el repo.
+- _Authentication → Emails → SMTP Settings_: host `smtp.gmail.com`, puerto `465`, usuario = la dirección de Gmail completa, contraseña = la de aplicación. El remitente debe ser esa misma dirección.
+- Límite de Gmail: unos 500 destinatarios al día, de sobra para el piloto. Prueba con un registro real y revisa la carpeta de spam.
+
+### Google OAuth en modo de prueba (F5)
+
+- La app de Google queda en **Testing**, sin publicar ni verificar (exigiría dominio propio).
+- _Google Auth Platform → Audience → Test users_: añade el correo de Google de cada participante del piloto. Máximo **100** en total (los eliminados siguen contando).
+- Quien no esté en la lista ve «Acceso bloqueado» al entrar con Google; puede usar correo y contraseña.
+- La pantalla de consentimiento muestra el dominio `<proyecto>.supabase.co`: es normal sin dominio propio.
+
 ## 3. Prueba de humo
 
 ```bash

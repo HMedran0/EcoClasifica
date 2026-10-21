@@ -18,7 +18,7 @@ Orden: `fix/arranque-config` ✅ → HU-20 (cuota diaria de IA) → HU-19 (recup
 
 ## Tareas manuales del responsable (F5)
 
-Ver `docs/BACKLOG.md` (tareas manuales de F5) y `docs/despliegue.md`.
+Sin dominio propio (proyecto universitario): SMTP con Gmail y contraseña de aplicación · Google OAuth en modo de prueba con los participantes como _test users_ (máx. 100) · reglas de contenedores con la alcaldía · texto de privacidad revisado por el director o tutor · ejecución del piloto. Detalle en `docs/BACKLOG.md` y `docs/despliegue.md`.
 
 ## Problemas abiertos
 
