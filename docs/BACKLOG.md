@@ -48,7 +48,13 @@ Orden de F4: HU-04 ✅ → HU-13 ✅ → HU-12 ✅ → HU-15 ✅ → HU-14 ✅. 
 
 Orden de F5: `fix/arranque-config` ✅ → HU-20 (cuota diaria de IA) → HU-19 (recuperar contraseña) → HU-21 (privacidad y autorización) → HU-22 (eliminar cuenta) → `chore/F5-imagenes-huerfanas` (script que borra de `scan-images` las imágenes sin fila en `scans`; los `warn` «pendiente de limpiar» de HU-14 dan los `scanId`) → `chore/F5-calidad` (Lighthouse ≥ 90 en Performance y Accesibilidad, RNF-03).
 
-Tareas manuales de F5 (del responsable, no de Claude Code): SMTP propio en Supabase Auth, dominio y publicación de la app de Google OAuth, validación de las reglas de contenedores con la alcaldía, validación del texto de privacidad y ejecución del piloto.
+Tareas manuales de F5 (del responsable, no de Claude Code; pasos en `docs/despliegue.md`). Sin dominio propio por ahora (proyecto universitario):
+
+- SMTP de Supabase Auth con una cuenta de Gmail y contraseña de aplicación (en lugar de Resend).
+- Google OAuth en modo de prueba: los participantes del piloto como _test users_ (máximo 100); sin publicar ni verificar la app.
+- Validación de las reglas de contenedores con la alcaldía.
+- Revisión del texto de privacidad por el director o tutor del proyecto.
+- Ejecución del piloto.
 
 ## v1.1 (después del piloto)
 
