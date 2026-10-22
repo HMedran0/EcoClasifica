@@ -111,6 +111,36 @@ curl -s -o /dev/null -D - -X OPTIONS $API/api/v1/scan/classify \
 En el navegador, la pantalla inicial muestra un punto **«Servicio disponible»** (verde) o **«Sin conexión»** (rojo):
 es un `GET /api/health` real desde el dominio de Vercel.
 
+## 4. Mantenimiento semanal (F5)
+
+`npm run maintenance` hace dos cosas:
+
+- Borra las **imágenes huérfanas** de `scan-images`: las que no tienen fila en `scans` (por ejemplo, de cuentas
+  borradas o de escaneos eliminados a medias) y tienen **más de 24 h**, para no tocar subidas en curso.
+- Purga `ai_usage` con **más de 90 días**, como promete la política de privacidad.
+
+**Cuándo:** una vez por semana durante el piloto (por ejemplo, los lunes) y después de borrar cuentas a mano.
+
+**Cómo** (desde la raíz del repo, en tu equipo). Necesita `SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY`, que se cargan
+del `.env` local igual que en `npm run dev:api` (el script corre en `backend/` y lee `backend/.env` o el `.env` de la
+raíz; las variables ya definidas en el entorno tienen prioridad):
+
+```bash
+npm run maintenance                     # 1. simulación (--dry-run): solo cuenta
+npm run maintenance -- --apply          # 2. si los números tienen sentido, borra
+```
+
+Alternativa sin `.env` local: tomar las variables de Railway con `railway run npm run maintenance [-- --apply]`.
+Comprueba que apuntan al mismo proyecto de Supabase que el piloto.
+
+- La salida trae solo conteos (nunca rutas, uuids ni correos). Código de salida 0 = bien.
+- **Cualquier error** al listar Storage o al consultar `scans` o `ai_usage` aborta antes de borrar (sale con 1,
+  «no se borró nada»). Si falla a mitad de un borrado, informa lo ya borrado: vuelve a ejecutarlo.
+- **Freno de seguridad:** si con al menos 20 imágenes revisadas más del 50 % sale huérfano, `--apply` se detiene sin
+  borrar nada (sale con 1). Suele indicar el proyecto equivocado o un fallo en `scans`. Revisa en Supabase y, solo si es
+  correcto, repite con `--apply --force`. La simulación ya avisa («AVISO: con --apply saltaría el freno»).
+- No corre en el contenedor de Railway (allí no está `tsx`): se ejecuta en local.
+
 ## Verificar en local lo que harán las plataformas
 
 ```bash

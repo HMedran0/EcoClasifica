@@ -23,7 +23,8 @@
     "format:check": "prettier --check .",
     "check": "npm run typecheck && npm run lint && npm run format:check && npm run test",
     "spike:ai": "npm run spike -w backend --",
-    "spike:chat": "npm run spike:chat -w backend --"
+    "spike:chat": "npm run spike:chat -w backend --",
+    "maintenance": "npm run maintenance -w backend --"
   },
   "devDependencies": {
     "@eslint/js": "^9.12.0",
