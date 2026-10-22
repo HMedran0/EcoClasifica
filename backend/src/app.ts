@@ -17,12 +17,14 @@ import {
   type ChatMessagesRepo,
 } from './repositories/chatMessages.repo';
 import { createSupabaseFavoritesRepo, type FavoritesRepo } from './repositories/favorites.repo';
+import { createSupabaseAiUsageRepo, type AiUsageRepo } from './repositories/aiUsage.repo';
 import { createSupabaseProfilesRepo, type ProfilesRepo } from './repositories/profiles.repo';
 import { createSupabaseScansRepo, type ScansRepo } from './repositories/scans.repo';
 import { createV1Routes, routes } from './routes';
 import { lazyAiProvider, type AiProvider } from './services/ai';
 import { createSupabaseTokenVerifier, type TokenVerifier } from './services/auth.service';
 import { createDisposalResolver } from './services/disposal.service';
+import { createUsageMeter } from './services/quota.service';
 import { httpLogLevel, logger } from './utils/logger';
 
 export interface AppDeps {
@@ -40,9 +42,16 @@ export interface AppDeps {
   favoritesRepo?: FavoritesRepo;
   /** Hilos del chat guardados inyectables (en memoria en pruebas). */
   chatMessagesRepo?: ChatMessagesRepo;
+  /** Registro y conteo de `ai_usage` inyectable (en memoria en pruebas, HU-20). */
+  aiUsageRepo?: AiUsageRepo;
+  /** Reloj de la cuota diaria inyectable (las pruebas cambian de día). */
+  now?: () => Date;
   /** Logger de peticiones inyectable (las pruebas capturan su salida). */
   logger?: Logger;
 }
+
+/** Solo desarrollo y pruebas. */
+const DEV_IP_HASH_SALT = 'ecoclasifica-dev-ip-hash-salt-no-usar-en-produccion';
 
 export function createApp(deps: AppDeps = {}) {
   const aiProvider = deps.aiProvider ?? lazyAiProvider();
@@ -53,6 +62,20 @@ export function createApp(deps: AppDeps = {}) {
   const scans = deps.scansRepo ?? createSupabaseScansRepo();
   const favorites = deps.favoritesRepo ?? createSupabaseFavoritesRepo();
   const chatMessages = deps.chatMessagesRepo ?? createSupabaseChatMessagesRepo();
+  const meter = createUsageMeter({
+    repo: deps.aiUsageRepo ?? createSupabaseAiUsageRepo(),
+    limits: {
+      userScans: env.QUOTA_USER_SCANS,
+      userChat: env.QUOTA_USER_CHAT,
+      anonScans: env.QUOTA_ANON_SCANS,
+      anonChat: env.QUOTA_ANON_CHAT,
+      dailyTokenCap: env.AI_DAILY_TOKEN_CAP,
+      anonTokenShare: env.AI_ANON_TOKEN_SHARE,
+    },
+    // En producción el arranque exige IP_HASH_SALT (productionConfigErrors).
+    ipSalt: env.IP_HASH_SALT ?? DEV_IP_HASH_SALT,
+    ...(deps.now ? { now: deps.now } : {}),
+  });
   const app = express();
 
   // Detrás del proxy de Railway: necesario para ver la IP real en el rate limiting.
@@ -86,7 +109,10 @@ export function createApp(deps: AppDeps = {}) {
   app.use('/api', routes);
   app.use(
     '/api/v1',
-    createV1Routes({ ai: aiProvider, disposal, profiles, scans, favorites, chatMessages }, auth),
+    createV1Routes(
+      { ai: aiProvider, disposal, profiles, scans, favorites, chatMessages, meter },
+      auth,
+    ),
   );
 
   app.use(notFound);

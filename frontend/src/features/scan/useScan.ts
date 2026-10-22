@@ -11,6 +11,8 @@ export type ScanState<T> =
   | { kind: 'success'; data: T; withSession: boolean }
   | { kind: 'error'; code: ApiErrorCode; message: string };
 
+const UNEXPECTED = 'UNEXPECTED_RESPONSE' satisfies ApiErrorCode;
+
 export type ScanRequest<T> = (req: ScanRequestInput, opts?: RequestOptions) => Promise<T>;
 
 /**
@@ -45,8 +47,9 @@ export function useScan<M extends ScanMode>(mode: M, request: ScanRequest<ScanRe
       },
       (err: unknown) => {
         if (controller.signal.aborted) return;
-        const code = err instanceof ApiError ? err.code : 'UNEXPECTED_RESPONSE';
-        setState({ kind: 'error', code, message: errorMessage(code) });
+        if (err instanceof ApiError)
+          setState({ kind: 'error', code: err.code, message: err.message });
+        else setState({ kind: 'error', code: UNEXPECTED, message: errorMessage(UNEXPECTED) });
       },
     );
     return () => controller.abort();

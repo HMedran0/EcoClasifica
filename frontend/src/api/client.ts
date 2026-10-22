@@ -210,8 +210,9 @@ async function readJson(res: Response, signal: AbortSignal): Promise<unknown> {
 function toApiError(status: number, json: unknown): ApiError {
   const parsed = errorBodySchema.safeParse(json);
   if (!parsed.success) return new ApiError('UNEXPECTED_RESPONSE', status);
-  const { code, requestId } = parsed.data.error;
-  return new ApiError(isBackendErrorCode(code) ? code : 'UNEXPECTED_RESPONSE', status, requestId);
+  const { code, message, requestId } = parsed.data.error;
+  if (!isBackendErrorCode(code)) return new ApiError('UNEXPECTED_RESPONSE', status, requestId);
+  return new ApiError(code, status, requestId, message);
 }
 
 export type ApiClient = ReturnType<typeof createApiClient>;

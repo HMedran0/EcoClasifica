@@ -79,8 +79,22 @@ describe('DeepSeekProvider', () => {
       'fetch',
       vi.fn().mockImplementation(async () => completion('{"x":1}')),
     );
+    // HU-20: el error lleva los tokens de ambos intentos para registrarlos en `ai_usage`.
     await expect(new DeepSeekProvider(cfg).classify(image)).rejects.toMatchObject({
       code: 'AI_BAD_RESPONSE',
+      usage: { promptTokens: 200, completionTokens: 40 },
+    });
+  });
+
+  it('un timeout en el reintento conserva los tokens del primer intento', async () => {
+    const timeout = Object.assign(new Error('timeout'), { name: 'TimeoutError' });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValueOnce(completion('{"x":1}')).mockRejectedValueOnce(timeout),
+    );
+    await expect(new DeepSeekProvider(cfg).classify(image)).rejects.toMatchObject({
+      code: 'AI_TIMEOUT',
+      usage: { promptTokens: 100, completionTokens: 20 },
     });
   });
 

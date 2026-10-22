@@ -7,7 +7,7 @@ import {
 } from '@ecoclasifica/shared';
 import { useEffect, useRef, useState } from 'react';
 import type { ChatRequestInput, RequestOptions } from '../../api/client';
-import { ApiError, errorMessage, type ApiErrorCode } from '../../api/errors';
+import { ApiError, errorMessage, isUntilTomorrow, type ApiErrorCode } from '../../api/errors';
 import { usePhotoStore } from '../camera/photoStore';
 
 export type ChatRequest = (req: ChatRequestInput, opts?: RequestOptions) => Promise<ChatResponse>;
@@ -128,7 +128,13 @@ export function useChat({
       },
       (err: unknown) => {
         if (controller.signal.aborted) return;
-        setStatus(errorStatus(err instanceof ApiError ? err.code : 'UNEXPECTED_RESPONSE'));
+        if (!(err instanceof ApiError)) return setStatus(errorStatus('UNEXPECTED_RESPONSE'));
+        // HU-20: el backend dice qué límite se alcanzó; el resto usa los textos del chat.
+        setStatus(
+          isUntilTomorrow(err.code)
+            ? { kind: 'error', code: err.code, message: err.message }
+            : errorStatus(err.code),
+        );
       },
     );
   }

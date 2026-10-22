@@ -264,10 +264,28 @@ Forma única: `{ "error": { "code": "...", "message": "...", "requestId": "..." 
 | 413  | `PAYLOAD_TOO_LARGE` | Cuerpo > 6 MB                                  |
 | 422  | `NOT_A_WASTE`       | La imagen no contiene un residuo               |
 | 422  | `UNSAFE_REQUEST`    | Idea del chat con un término bloqueado         |
-| 429  | `RATE_LIMITED`      | Límite por IP o cuota diaria                   |
+| 429  | `RATE_LIMITED`      | Límite por minuto por IP                       |
+| 429  | `QUOTA_EXCEEDED`    | Cuota diaria de IA agotada (HU-20)             |
 | 502  | `AI_BAD_RESPONSE`   | JSON inválido o truncado tras el reintento     |
 | 504  | `AI_TIMEOUT`        | DeepSeek no respondió en 20 s                  |
 | 500  | `INTERNAL_ERROR`    | Error no controlado                            |
+| 503  | `SERVICE_PAUSED`    | Tope global diario de tokens (HU-20)           |
+
+## Cuota diaria de IA (HU-20)
+
+Se comprueba en `POST /scan/classify`, `POST /scan/upcycle` y `POST /chat` **antes** de llamar a la IA (después de validar el cuerpo). El día va de medianoche a medianoche en `America/Bogota`.
+
+| Quién                    | Escaneos (classify + upcycle) | Mensajes de chat | Variables                             |
+| ------------------------ | ----------------------------- | ---------------- | ------------------------------------- |
+| Con sesión (por usuario) | 60                            | 100              | `QUOTA_USER_SCANS`, `QUOTA_USER_CHAT` |
+| Sin sesión (por IP)      | 30                            | 60               | `QUOTA_ANON_SCANS`, `QUOTA_ANON_CHAT` |
+| Todo el servicio         | 1 000 000 tokens              | (mismo tope)     | `AI_DAILY_TOKEN_CAP`                  |
+
+- Cuota agotada → `429 QUOTA_EXCEEDED`, con `Retry-After` (segundos hasta medianoche) y un mensaje que dice qué límite se alcanzó. Sin sesión invita a crear una cuenta. La IP es compartida por CGNAT: por eso el límite anónimo no es mucho menor.
+- Tope global → `503 SERVICE_PAUSED` («Servicio en pausa por hoy») y un `warn`. Al llegar al 70 % (`AI_ANON_TOKEN_SHARE`), los anónimos reciben `429 QUOTA_EXCEEDED` invitando a crear cuenta; con sesión se sigue hasta el 100 %.
+- Si no se puede contar (Supabase caído), se deja pasar con un `warn`.
+- Cada llamada a la IA deja una fila en `ai_usage` (endpoint, `user_id` o `ip_hash`, `scan_id` si se guardó, tokens, latencia), **también las fallidas** con los tokens conocidos. Nunca la imagen ni el texto. Sin sesión se guarda `HMAC-SHA256(IP_HASH_SALT, ip)`, nunca la IP. Si registrar falla, se responde igual con un `warn`.
+- «Guardar este escaneo» vuelve a llamar a la IA y gasta cuota.
 
 ## DeepSeek (llamada del backend)
 

@@ -169,6 +169,16 @@ describe('IdeasPage', () => {
     expect(usePhotoStore.getState()).toMatchObject({ photo: null, results: {} });
   });
 
+  it('QUOTA_EXCEEDED sin sesión: invita a crear cuenta y no ofrece Reintentar (HU-20)', async () => {
+    const message =
+      'Desde esta conexión se alcanzó el límite de hoy sin cuenta: 30 escaneos. ' +
+      'Crea una cuenta gratis para seguir hoy. Se reinicia a medianoche (hora de Colombia).';
+    renderPage(vi.fn().mockRejectedValue(new ApiError('QUOTA_EXCEEDED', 429, 'r1', message)));
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Crea una cuenta gratis para seguir hoy');
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument();
+  });
+
   it('sin conexión: mismo mensaje que /resultado y Reintentar', async () => {
     const upcycle = vi
       .fn()

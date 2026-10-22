@@ -185,6 +185,25 @@ describe('ResultPage', () => {
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:preview');
   });
 
+  it('QUOTA_EXCEEDED: muestra el mensaje del servidor sin Reintentar (HU-20)', async () => {
+    const message =
+      'Llegaste al límite de hoy: 60 escaneos. Se reinicia a medianoche (hora de Colombia).';
+    const classify = vi.fn().mockRejectedValue(new ApiError('QUOTA_EXCEEDED', 429, 'r1', message));
+    renderPage(classify);
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Llegaste al límite de hoy');
+    expect(alert).toHaveTextContent(message);
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tomar otra foto' })).toBeInTheDocument();
+    expect(classify).toHaveBeenCalledOnce();
+  });
+
+  it('SERVICE_PAUSED: «Servicio en pausa por hoy» sin Reintentar', async () => {
+    renderPage(vi.fn().mockRejectedValue(new ApiError('SERVICE_PAUSED', 503)));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Servicio en pausa por hoy');
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument();
+  });
+
   it('otros errores: alerta en español y Reintentar', async () => {
     const classify = vi
       .fn()
