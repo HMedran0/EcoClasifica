@@ -1,6 +1,12 @@
 import { AuthApiError, AuthRetryableFetchError } from '@supabase/supabase-js';
 import { describe, expect, it } from 'vitest';
-import { authErrorCode, authErrorMessage, EMAIL_NOT_CONFIRMED } from './authErrors';
+import {
+  authErrorCode,
+  authErrorMessage,
+  EMAIL_NOT_CONFIRMED,
+  recoveryLinkErrorCode,
+  recoveryLinkProblem,
+} from './authErrors';
 
 const apiError = (code: string, message = 'Some English message') =>
   new AuthApiError(message, 400, code);
@@ -36,5 +42,26 @@ describe('authErrorMessage', () => {
     expect(authErrorMessage(new Error('boom'))).toBe(
       'No pudimos completar la acción. Intenta de nuevo.',
     );
+  });
+});
+
+describe('enlace de recuperación', () => {
+  it.each([
+    ['otp_expired', 'expired'],
+    ['flow_state_expired', 'expired'],
+    ['bad_code_verifier', 'otherDevice'],
+    ['flow_state_not_found', 'otherDevice'],
+    ['access_denied', 'invalid'],
+    [undefined, 'invalid'],
+  ])('%s → %s', (code, problem) => {
+    expect(recoveryLinkProblem(code)).toBe(problem);
+  });
+
+  it('lee el error de la query o del hash', () => {
+    expect(recoveryLinkErrorCode('?error=access_denied&error_code=otp_expired', '')).toBe(
+      'otp_expired',
+    );
+    expect(recoveryLinkErrorCode('', '#error=access_denied')).toBe('access_denied');
+    expect(recoveryLinkErrorCode('?code=abc', '')).toBeNull();
   });
 });
