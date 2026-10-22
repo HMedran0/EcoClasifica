@@ -10,6 +10,10 @@ import { HistoryDetailPage } from '../features/history/HistoryDetailPage';
 import { HistoryPage } from '../features/history/HistoryPage';
 import { HomePage } from '../features/home/HomePage';
 import { IdeasPage } from '../features/upcycle/IdeasPage';
+import { ConsentGate } from '../features/privacy/ConsentGate';
+import { ConsentPage } from '../features/privacy/ConsentPage';
+import { CONSENT_PATH, PRIVACY_PATH } from '../features/privacy/paths';
+import { PrivacyPage } from '../features/privacy/PrivacyPage';
 import { OfflineBanner } from '../pwa/OfflineBanner';
 import { UpdatePrompt } from '../pwa/UpdatePrompt';
 
@@ -17,39 +21,44 @@ export function App() {
   return (
     <BrowserRouter>
       <OfflineBanner />
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/camara" element={<CameraPage />} />
-        <Route path="/resultado" element={<ResultPage />} />
-        <Route path="/ideas" element={<IdeasPage />} />
-        <Route path="/chat" element={<ChatPage />} />
-        <Route path="/entrar" element={<LoginPage />} />
-        <Route path="/restablecer" element={<ResetPasswordPage />} />
-        <Route
-          path="/historial"
-          element={
-            <RequireAuth>
-              <HistoryPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/historial/:id"
-          element={
-            <RequireAuth>
-              <HistoryDetailPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/favoritos"
-          element={
-            <RequireAuth>
-              <FavoritesPage />
-            </RequireAuth>
-          }
-        />
-      </Routes>
+      {/* HU-21: con sesión, pide la autorización vigente antes de seguir. */}
+      <ConsentGate>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/camara" element={<CameraPage />} />
+          <Route path="/resultado" element={<ResultPage />} />
+          <Route path="/ideas" element={<IdeasPage />} />
+          <Route path="/chat" element={<ChatPage />} />
+          <Route path="/entrar" element={<LoginPage />} />
+          <Route path="/restablecer" element={<ResetPasswordPage />} />
+          <Route path={PRIVACY_PATH} element={<PrivacyPage />} />
+          <Route path={CONSENT_PATH} element={<ConsentPage />} />
+          <Route
+            path="/historial"
+            element={
+              <RequireAuth>
+                <HistoryPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/historial/:id"
+            element={
+              <RequireAuth>
+                <HistoryDetailPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/favoritos"
+            element={
+              <RequireAuth>
+                <FavoritesPage />
+              </RequireAuth>
+            }
+          />
+        </Routes>
+      </ConsentGate>
       <UpdatePrompt />
     </BrowserRouter>
   );

@@ -69,7 +69,24 @@ afterEach(() => {
   Reflect.deleteProperty(navigator, 'mediaDevices');
 });
 
+const ANON_NOTICE = /La foto se envía a un servicio de IA externo para analizarla y no se guarda/;
+
 describe('CameraPage', () => {
+  it('sin sesión avisa que la foto va a una IA externa y no se guarda (HU-21)', async () => {
+    mockGetUserMedia(() => Promise.resolve(fakeStream()));
+    renderPage();
+    await screen.findByRole('button', { name: 'Tomar foto' });
+
+    expect(screen.getByText(ANON_NOTICE)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Ver política' })).toHaveAttribute(
+      'href',
+      '/privacidad',
+    );
+
+    act(() => useAuthStore.setState({ session: fakeSession(), ready: true }));
+    expect(screen.queryByText(ANON_NOTICE)).not.toBeInTheDocument();
+  });
+
   it('con sesión avisa que el escaneo se guardará en el historial', async () => {
     mockGetUserMedia(() => Promise.resolve(fakeStream()));
     renderPage();

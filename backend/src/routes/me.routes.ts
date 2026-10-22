@@ -9,5 +9,7 @@ export function createMeRoutes(deps: MeDeps, auth: AuthMiddlewares) {
   const controller = createMeController(deps);
 
   router.get('/me', auth.requireAuth, asyncHandler(controller.show));
+  // HU-21: sin cuerpo; la versión la fija el servidor.
+  router.post('/me/consent', auth.requireAuth, asyncHandler(controller.consent));
   return router;
 }

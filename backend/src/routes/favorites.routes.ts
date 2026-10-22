@@ -4,9 +4,10 @@ import { createFavoritesController } from '../controllers/favorites.controller';
 import type { AuthMiddlewares } from '../middlewares/auth';
 import { validate } from '../middlewares/validate';
 import type { FavoritesDeps } from '../services/favorites.service';
+import type { MeDeps } from '../services/me.service';
 import { asyncHandler } from '../utils/asyncHandler';
 
-export function createFavoritesRoutes(deps: FavoritesDeps, auth: AuthMiddlewares) {
+export function createFavoritesRoutes(deps: FavoritesDeps & MeDeps, auth: AuthMiddlewares) {
   const router = Router();
   const controller = createFavoritesController(deps);
 

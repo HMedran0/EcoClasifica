@@ -4,6 +4,8 @@ export const ERROR_STATUS = {
   VALIDATION_ERROR: 400,
   INVALID_IMAGE: 400,
   UNAUTHORIZED: 401,
+  /** Sesión sin autorización de la política vigente (HU-21): no se guardan favoritos. */
+  CONSENT_REQUIRED: 403,
   NOT_FOUND: 404,
   PAYLOAD_TOO_LARGE: 413,
   NOT_A_WASTE: 422,

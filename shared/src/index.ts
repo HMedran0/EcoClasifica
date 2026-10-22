@@ -1,4 +1,5 @@
 export * from './constants/materials';
+export * from './constants/privacy';
 export * from './schemas/errors';
 export * from './schemas/ai';
 export * from './schemas/scan';

@@ -11,6 +11,7 @@ Base: `/api/v1` (salud en `/api/health`). JSON siempre. Auth: `Authorization: Be
 | POST   | `/api/v1/chat`                  | Opcional | Chat paso a paso sobre una idea         |
 | GET    | `/api/v1/chat/:ideaId/messages` | Sí       | Hilo guardado del chat de una idea      |
 | GET    | `/api/v1/me`                    | Sí       | Perfil del usuario con sesión           |
+| POST   | `/api/v1/me/consent`            | Sí       | Autoriza la política vigente (HU-21)    |
 | GET    | `/api/v1/history`               | Sí       | Escaneos del usuario (paginado)         |
 | GET    | `/api/v1/history/:id`           | Sí       | Detalle de un escaneo                   |
 | DELETE | `/api/v1/history/:id`           | Sí       | Elimina escaneo e imagen                |
@@ -35,7 +36,19 @@ Sin token, los endpoints de escaneo funcionan pero no guardan nada (`saved: fals
 
 ## GET /me
 
-Respuesta 200 (`meResponseSchema`): `{ "id": "uuid", "email": "ana@ejemplo.com", "displayName": "Ana" }`. `email` sale del token; `displayName`, de `profiles` (filtrado por `req.user.id`; `null` si no hay perfil o nombre).
+Respuesta 200 (`meResponseSchema`): `{ "id": "uuid", "email": "ana@ejemplo.com", "displayName": "Ana" }`. `email` sale del token; `displayName`, de `profiles` (filtrado por `req.user.id`; `null` si no hay perfil o nombre). `privacyVersion` (HU-21): versión de la política autorizada, o `null` si nunca autorizó.
+
+## POST /me/consent (HU-21)
+
+Sin cuerpo (cualquier campo se ignora). Guarda en `profiles` la versión vigente **del servidor** (`PRIVACY_VERSION` de `shared`) y la hora del servidor, filtrando por `req.user.id`. Respuesta 200 (`consentResponseSchema`): `{ "privacyVersion": "2026-10-1", "privacyAcceptedAt": "<ISO 8601>" }`. Si ya había autorizado esa versión, no cambia nada y responde la primera fecha. Sin perfil → `404 NOT_FOUND`.
+
+Con sesión pero sin la versión vigente autorizada (nunca o una vieja):
+
+- `POST /scan/classify` y `POST /scan/upcycle` responden el resultado con `scanId: null` y `saved: false`, sin guardar nada.
+- `POST /chat` funciona como sin sesión: usa la idea y el hilo del cliente (con las validaciones de HU-11) y no carga ni guarda mensajes.
+- `POST /favorites` → `403 CONSENT_REQUIRED`. Leer y borrar los propios datos sigue permitido.
+
+El frontend (`ConsentGate`) lleva a `/autorizacion` tras iniciar sesión si `privacyVersion` no es la vigente. Si el usuario marcó la casilla al registrarse con correo (`user_metadata.privacy_version`), registra la autorización sin volver a preguntar. La prueba legal es la fila de `profiles`, no los metadatos: el usuario puede escribir sus propios `user_metadata`, así que solo sirven para no volver a preguntar.
 
 ## POST /scan/classify
 
@@ -208,6 +221,7 @@ Solicitud (`createFavoriteSchema`): `{ "ideaId": "uuid" }`. Cualquier otro campo
 
 - `201` con el favorito nuevo; `200` con el existente si la idea ya era favorita (idempotente, también si dos peticiones llegan a la vez: `unique (user_id, idea_id)`).
 - Idea de otro usuario o inexistente → `404 NOT_FOUND`. `ideaId` mal formado → `400 VALIDATION_ERROR`.
+- Sin autorización de la política vigente → `403 CONSENT_REQUIRED` (HU-21).
 
 ### DELETE /favorites/:id
 
@@ -260,6 +274,7 @@ Forma única: `{ "error": { "code": "...", "message": "...", "requestId": "..." 
 | 400  | `VALIDATION_ERROR`  | El cuerpo no cumple el esquema (salvo `image`) |
 | 400  | `INVALID_IMAGE`     | Falla `image`: falta, tamaño, Base64 o tipo    |
 | 401  | `UNAUTHORIZED`      | Token ausente o inválido en endpoint protegido |
+| 403  | `CONSENT_REQUIRED`  | Favorito sin autorizar la política (HU-21)     |
 | 404  | `NOT_FOUND`         | No existe o no es del usuario                  |
 | 413  | `PAYLOAD_TOO_LARGE` | Cuerpo > 6 MB                                  |
 | 422  | `NOT_A_WASTE`       | La imagen no contiene un residuo               |

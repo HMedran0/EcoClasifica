@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import {
   compressImage,
   compressVideoFrame,
@@ -7,6 +7,7 @@ import {
   type CompressedPhoto,
 } from './compressImage';
 import { useAuthStore } from '../auth/authStore';
+import { PRIVACY_PATH } from '../privacy/paths';
 import { ModeSwitch } from './ModeSwitch';
 import { usePhotoStore } from './photoStore';
 import { useScanModeStore } from './scanModeStore';
@@ -100,7 +101,17 @@ export function CameraPage({
 
       {/* Visible con cámara y con vista previa: el modo se puede cambiar antes de usar la foto. */}
       <ModeSwitch />
-      {signedIn && <p className="text-sm text-bosque">Se guardará en tu historial</p>}
+      {signedIn ? (
+        <p className="text-sm text-bosque">Se guardará en tu historial</p>
+      ) : (
+        // HU-21: aviso previo al escaneo sin cuenta.
+        <p className="text-sm text-bosque">
+          La foto se envía a un servicio de IA externo para analizarla y no se guarda.{' '}
+          <Link to={PRIVACY_PATH} className="font-semibold underline">
+            Ver política
+          </Link>
+        </p>
+      )}
 
       {/* Siempre montado: `useCamera` necesita el elemento para conectar el flujo al reabrir. */}
       <video

@@ -4,6 +4,7 @@ import { AccountStatus } from '../auth/AccountStatus';
 import { useAuthStore } from '../auth/authStore';
 import { InstallButton } from '../../pwa/InstallButton';
 import { useOnlineStatus } from '../../pwa/useOnlineStatus';
+import { PRIVACY_PATH } from '../privacy/paths';
 import { ServiceStatus } from './ServiceStatus';
 
 const SCAN_BUTTON =
@@ -88,6 +89,12 @@ export function HomePage() {
       <AccountStatus />
       <InstallButton />
       <ServiceStatus />
+      <Link
+        to={PRIVACY_PATH}
+        className="min-h-tactil px-3 py-3 text-sm font-semibold text-bosque underline"
+      >
+        Política de privacidad
+      </Link>
     </main>
   );
 }

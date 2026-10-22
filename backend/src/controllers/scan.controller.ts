@@ -1,11 +1,12 @@
 import type { ScanRequest } from '@ecoclasifica/shared';
 import type { Request, Response } from 'express';
 import { classifyScan, type ClassifyDeps } from '../services/classification.service';
+import { consentedUser, type MeDeps } from '../services/me.service';
 import type { UsageMeter } from '../services/quota.service';
 import { saveScan, type ScanSaveDeps } from '../services/scanSave.service';
 import { upcycleScan } from '../services/upcycle.service';
 
-export type ScanDeps = ClassifyDeps & ScanSaveDeps & { meter: UsageMeter };
+export type ScanDeps = ClassifyDeps & ScanSaveDeps & MeDeps & { meter: UsageMeter };
 
 /**
  * HU-20: la IA pasa por el medidor y `ai_usage` se escribe al final, con el `scanId` si se guardó.
@@ -35,8 +36,10 @@ export const createScanController = (deps: ScanDeps) => ({
       const { response, usage, latencyMs } = await classifyScan(d, body, req.log);
       // Solo métricas: nunca la imagen ni el Base64.
       req.log.info({ mode: 'classify', ...usage, latencyMs }, 'Escaneo completado');
-      // Sin sesión no se guarda nada (`saved: false`); NOT_A_WASTE y los errores ya salieron arriba.
-      return req.user ? await saveScan(d, req.user, body, response, req.log) : response;
+      // Sin sesión o sin autorización vigente (HU-21) no se guarda nada (`saved: false`);
+      // NOT_A_WASTE y los errores ya salieron arriba.
+      const owner = await consentedUser(d, req.user);
+      return owner ? await saveScan(d, owner, body, response, req.log) : response;
     });
     res.json(response);
   },
@@ -49,7 +52,8 @@ export const createScanController = (deps: ScanDeps) => ({
         { mode: 'upcycle', canUpcycle: response.result.canUpcycle, ...usage, latencyMs },
         'Escaneo completado',
       );
-      return req.user ? await saveScan(d, req.user, body, response, req.log) : response;
+      const owner = await consentedUser(d, req.user);
+      return owner ? await saveScan(d, owner, body, response, req.log) : response;
     });
     res.json(response);
   },

@@ -3,6 +3,8 @@ import {
   chatResponseSchema,
   type ChatHistoryResponse,
   classifyResponseSchema,
+  consentResponseSchema,
+  type ConsentResponse,
   type ChatResponse,
   type chatRequestSchema,
   errorBodySchema,
@@ -19,6 +21,8 @@ import {
   type ClassifyResponse,
   type DeleteHistoryResponse,
   type HealthResponse,
+  meResponseSchema,
+  type MeResponse,
   type scanRequestSchema,
   type UpcycleResponse,
   upcycleResponseSchema,
@@ -166,6 +170,12 @@ export function createApiClient({
         opts,
       );
     },
+    /** HU-21: perfil con la versión de la política autorizada (requiere sesión). */
+    me: (opts?: RequestOptions): Promise<MeResponse> =>
+      request('/api/v1/me', { method: 'GET' }, meResponseSchema, opts),
+    /** HU-21: registra la autorización; la versión la fija el servidor, por eso no hay cuerpo. */
+    acceptPrivacy: (opts?: RequestOptions): Promise<ConsentResponse> =>
+      request('/api/v1/me/consent', { method: 'POST', body: {} }, consentResponseSchema, opts),
     /** Indicador de conexión de la pantalla inicial (prueba de humo de CORS en producción). */
     health: (opts?: RequestOptions): Promise<HealthResponse> =>
       request('/api/health', { method: 'GET' }, healthResponseSchema, opts),

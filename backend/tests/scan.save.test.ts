@@ -12,6 +12,7 @@ import type { AiProvider } from '../src/services/ai/ai.provider';
 import { createLogger } from '../src/utils/logger';
 import { fakeDisposalRepo } from './helpers/disposalRules';
 import { bearer, fakeVerifier, memoryScansRepo, TOKEN_A, USER_A } from './helpers/scansRepo';
+import { memoryProfilesRepo } from './helpers/profilesRepo';
 
 const jpegBytes = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(200)]);
 const validBody = { image: jpegBytes.toString('base64'), mimeType: 'image/jpeg' };
@@ -74,6 +75,7 @@ function setup(ai = fakeAi(bottle), lines?: string[]) {
     disposalRepo: fakeDisposalRepo(),
     aiProvider: ai,
     tokenVerifier: fakeVerifier,
+    profilesRepo: memoryProfilesRepo(),
     scansRepo,
     logger: createLogger('info', sink),
   });

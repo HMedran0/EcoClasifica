@@ -22,6 +22,7 @@ ai_usage   → profiles, scans         (solo lo usa el backend)
 - **Solo usuarios autenticados guardan:** los escaneos anónimos no llegan a `scans`.
 - **Copia del resultado (`0003_scans_result.sql`):** `scans.result` (jsonb, `not null`, `check` de objeto) guarda lo que vio el usuario. El detalle del historial se arma desde ahí, sin la IA y sin depender de las reglas vigentes. Las columnas sueltas (`object_name`, `material_code`, …) se conservan para filtros (HU-16).
 - **Cuota de IA (`0004_ai_usage_quota.sql`, HU-20):** `ai_usage.ip_hash` (HMAC-SHA256 de la IP con `IP_HASH_SALT`, solo sin sesión; nunca la IP), índices `(ip_hash, created_at)` y `(created_at)`, y la función `ai_tokens_since(since)` para el tope global (solo `service_role`). Las filas con más de 90 días se borran en el script de mantenimiento de F5.
+- **Autorización de datos (`0005_privacy_consent.sql`, HU-21):** `profiles.privacy_version` y `privacy_accepted_at` (ambas nulas o ambas con valor). Solo las escribe el backend (`POST /me/consent`) con la versión del servidor. `anon` y `authenticated` pierden `insert`/`update` sobre toda la tabla y conservan solo `display_name` y `avatar_url`, para que el cliente no pueda falsificar la prueba.
 - **Chat ligado a la idea:** `chat_messages` se borra con la idea.
 
 ## Reglas de disposición (semilla)

@@ -22,6 +22,7 @@ routes.use(healthRoutes);
 //       chat.routes.ts      → POST /api/v1/chat                   (HU-11)
 //                             GET /chat/:ideaId/messages          (HU-15)
 //   F4: me.routes.ts        → GET /api/v1/me                      (HU-04)
+//                             POST /api/v1/me/consent             (HU-21)
 //       history.routes.ts   → GET /api/v1/history, /history/:id   (HU-13)
 //       favorites.routes.ts → GET/POST /favorites, DELETE /:id    (HU-12; pantalla en HU-15)
 export function createV1Routes(

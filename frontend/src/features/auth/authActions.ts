@@ -1,3 +1,4 @@
+import { PRIVACY_VERSION } from '@ecoclasifica/shared';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from './authStore';
 import { returnUrl } from './returnPath';
@@ -21,12 +22,16 @@ export async function signIn(credentials: Credentials): Promise<void> {
   useAuthStore.setState({ session: data.session, ready: true });
 }
 
-/** Con «Confirm email» activo no hay sesión hasta verificar: el enlace del correo vuelve a `back`. */
+/**
+ * Con «Confirm email» activo no hay sesión hasta verificar: el enlace del correo vuelve a `back`.
+ * HU-21: la casilla marcada viaja en `user_metadata` solo para no volver a preguntar al entrar; la
+ * prueba de la autorización la escribe el backend en `profiles` (`ConsentGate`).
+ */
 export async function signUp(credentials: Credentials, back: string): Promise<void> {
   check(
     await supabase.auth.signUp({
       ...credentials,
-      options: { emailRedirectTo: returnUrl(back) },
+      options: { emailRedirectTo: returnUrl(back), data: { privacy_version: PRIVACY_VERSION } },
     }),
   );
 }
