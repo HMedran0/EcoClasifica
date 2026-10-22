@@ -10,6 +10,7 @@ import request from 'supertest';
 import { describe, expect, it, vi } from 'vitest';
 import { createApp } from '../src/app';
 import { fakeDisposalRepo } from './helpers/disposalRules';
+import { memoryProfilesRepo } from './helpers/profilesRepo';
 import {
   memoryFavoritesRepo,
   snapshotOf,
@@ -36,6 +37,7 @@ const appWith = (
     disposalRepo: fakeDisposalRepo(),
     aiProvider: { classify: vi.fn(), upcycle: vi.fn(), chat: vi.fn() },
     tokenVerifier: fakeVerifier,
+    profilesRepo: memoryProfilesRepo(),
     scansRepo,
     favoritesRepo,
   });

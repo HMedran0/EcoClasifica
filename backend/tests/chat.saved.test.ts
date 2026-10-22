@@ -14,6 +14,7 @@ import { memoryChatMessagesRepo, savedThread } from './helpers/chatMessagesRepo'
 import { fakeDisposalRepo } from './helpers/disposalRules';
 import { memoryFavoritesRepo, storedIdea } from './helpers/favoritesRepo';
 import { bearer, fakeVerifier, TOKEN_A, TOKEN_B, USER_A, USER_B } from './helpers/scansRepo';
+import { memoryProfilesRepo } from './helpers/profilesRepo';
 
 // HU-15: chat con la idea guardada (contexto e hilo desde la base) y GET del hilo.
 
@@ -50,6 +51,7 @@ function setup({
     disposalRepo: fakeDisposalRepo(),
     aiProvider: { classify: vi.fn(), upcycle: vi.fn(), chat },
     tokenVerifier: fakeVerifier,
+    profilesRepo: memoryProfilesRepo(),
     favoritesRepo: memoryFavoritesRepo([ideaA, ideaB]),
     chatMessagesRepo: messagesRepo,
     ...(logger ? { logger } : {}),

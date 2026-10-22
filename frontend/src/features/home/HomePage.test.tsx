@@ -12,6 +12,19 @@ vi.mock('../../api/client', () => ({
 }));
 
 describe('HomePage', () => {
+  it('enlaza a la política de privacidad sin sesión (HU-21)', () => {
+    useAuthStore.setState({ session: null, ready: true });
+    render(
+      <MemoryRouter>
+        <HomePage />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('link', { name: 'Política de privacidad' })).toHaveAttribute(
+      'href',
+      '/privacidad',
+    );
+  });
+
   it('con sesión enlaza a «Mi historial» y «Mis favoritos»; sin sesión no', () => {
     useAuthStore.setState({ session: null, ready: true });
     const { unmount } = render(

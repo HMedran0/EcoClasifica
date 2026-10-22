@@ -24,8 +24,8 @@ const rejected = (message: string) => ({ data: null, error: new AuthInvalidJwtEr
 function fakeProfiles(displayName: string | null = 'Ana') {
   const findById = vi
     .fn<ProfilesRepo['findById']>()
-    .mockResolvedValue(displayName === null ? null : { displayName });
-  return { findById } satisfies ProfilesRepo;
+    .mockResolvedValue(displayName === null ? null : { displayName, privacyVersion: '2026-01-1' });
+  return { findById, saveConsent: vi.fn() } satisfies ProfilesRepo;
 }
 
 const chat = vi.fn<AiProvider['chat']>();
@@ -162,6 +162,7 @@ describe('GET /api/v1/me (requireAuth)', () => {
       id: USER_ID,
       email: 'ana@ejemplo.com',
       displayName: 'Ana',
+      privacyVersion: '2026-01-1',
     });
     expect(profilesRepo.findById).toHaveBeenCalledWith(USER_ID);
   });
@@ -172,6 +173,7 @@ describe('GET /api/v1/me (requireAuth)', () => {
       .set(bearer(VALID));
     expect(res.status).toBe(200);
     expect(res.body.displayName).toBeNull();
+    expect(res.body.privacyVersion).toBeNull();
   });
 });
 

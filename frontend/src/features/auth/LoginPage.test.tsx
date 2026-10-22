@@ -1,10 +1,11 @@
+import { PRIVACY_VERSION } from '@ecoclasifica/shared';
 import { AuthApiError } from '@supabase/supabase-js';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fakeAuth, fakeSession, resetFakeAuth } from '../../test/supabaseMock';
 import { useAuthStore } from './authStore';
-import { LoginPage } from './LoginPage';
+import { CONSENT_MISSING, LoginPage } from './LoginPage';
 
 vi.mock('../../lib/supabase', async () => ({
   supabase: (await import('../../test/supabaseMock')).fakeSupabase,
@@ -34,6 +35,7 @@ const fill = (email: string, password: string) => {
 };
 const openSignup = () => fireEvent.click(screen.getByRole('tab', { name: 'Crear cuenta' }));
 const submit = (name: string) => fireEvent.click(screen.getByRole('button', { name }));
+const consentBox = () => screen.getByRole('checkbox', { name: /Autorizo el tratamiento/ });
 
 beforeEach(() => {
   resetFakeAuth();
@@ -65,6 +67,7 @@ describe('LoginPage: crear cuenta', () => {
     renderLogin('/entrar?volver=%2Fhistorial');
     openSignup();
     fill(' ana@ejemplo.com ', '12345678');
+    fireEvent.click(consentBox());
     submit('Crear cuenta');
 
     expect(await screen.findByRole('status')).toHaveTextContent(
@@ -73,7 +76,10 @@ describe('LoginPage: crear cuenta', () => {
     expect(fakeAuth.signUp).toHaveBeenCalledWith({
       email: 'ana@ejemplo.com',
       password: '12345678',
-      options: { emailRedirectTo: `${ORIGIN}/historial` },
+      options: {
+        emailRedirectTo: `${ORIGIN}/historial`,
+        data: { privacy_version: PRIVACY_VERSION },
+      },
     });
   });
 
@@ -85,10 +91,37 @@ describe('LoginPage: crear cuenta', () => {
     renderLogin();
     openSignup();
     fill('ana@ejemplo.com', '12345678');
+    fireEvent.click(consentBox());
     submit('Crear cuenta');
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/contraseña es muy débil/);
     expect(screen.queryByText(/stronger/)).not.toBeInTheDocument();
+  });
+});
+
+describe('LoginPage: autorización de datos (HU-21)', () => {
+  it('la casilla empieza sin marcar y sin ella no se crea la cuenta', async () => {
+    renderLogin();
+    openSignup();
+    expect(consentBox()).not.toBeChecked();
+    // El de la casilla y el del pie de página.
+    const links = screen.getAllByRole('link', { name: 'Política de privacidad' });
+    expect(links).toHaveLength(2);
+    for (const link of links) expect(link).toHaveAttribute('href', '/privacidad');
+    fill('ana@ejemplo.com', '12345678');
+    submit('Crear cuenta');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(CONSENT_MISSING);
+    expect(fakeAuth.signUp).not.toHaveBeenCalled();
+  });
+
+  it('iniciar sesión no muestra la casilla; la página enlaza a la política', () => {
+    renderLogin();
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Política de privacidad' })).toHaveAttribute(
+      'href',
+      '/privacidad',
+    );
   });
 });
 

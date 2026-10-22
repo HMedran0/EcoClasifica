@@ -10,6 +10,7 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   VALIDATION_ERROR: 'No pudimos procesar la solicitud. Intenta de nuevo.',
   INVALID_IMAGE: 'La foto no es válida. Toma otra en formato JPEG, PNG o WebP.',
   UNAUTHORIZED: 'Tu sesión expiró. Inicia sesión de nuevo.',
+  CONSENT_REQUIRED: 'Para guardar en tu cuenta debes autorizar el tratamiento de tus datos.',
   NOT_FOUND: 'No encontramos lo que buscabas.',
   PAYLOAD_TOO_LARGE: 'La foto es demasiado grande. Toma otra.',
   NOT_A_WASTE: 'No encontramos un residuo en la foto. Intenta con otra.',

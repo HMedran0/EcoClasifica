@@ -10,6 +10,8 @@ import {
 import { authErrorCode, authErrorMessage, EMAIL_NOT_CONFIRMED } from './authErrors';
 import { BUTTON, EMAIL_PATTERN, FORGOT_PARAM, INPUT, INVALID_EMAIL } from './authForm';
 import { useAuthStore } from './authStore';
+import { ConsentCheckbox } from '../privacy/ConsentCheckbox';
+import { PRIVACY_PATH } from '../privacy/paths';
 import { ForgotPasswordForm } from './ForgotPasswordForm';
 import { RETURN_PARAM, safeReturnPath } from './returnPath';
 
@@ -19,14 +21,16 @@ const TABS: Record<Tab, string> = { signin: 'Iniciar sesión', signup: 'Crear cu
 
 const SIGNUP_SENT = 'Te enviamos un correo para verificar tu cuenta. Ábrelo y luego inicia sesión.';
 const RESENT = 'Te enviamos de nuevo el correo de verificación.';
+export const CONSENT_MISSING = 'Para crear tu cuenta debes autorizar el tratamiento de tus datos.';
 
 /** Validación propia (no la del navegador) para que los mensajes estén en español. */
-function validate(tab: Tab, email: string, password: string): string | null {
+function validate(tab: Tab, email: string, password: string, consent: boolean): string | null {
   if (!EMAIL_PATTERN.test(email)) return INVALID_EMAIL;
   if (tab === 'signup' && password.length < MIN_PASSWORD_LENGTH) {
     return `La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`;
   }
   if (!password) return 'Escribe tu contraseña.';
+  if (tab === 'signup' && !consent) return CONSENT_MISSING;
   return null;
 }
 
@@ -38,6 +42,7 @@ export function LoginPage() {
   const [tab, setTab] = useState<Tab>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -79,7 +84,7 @@ export function LoginPage() {
   function submit(event: FormEvent) {
     event.preventDefault();
     const trimmed = email.trim();
-    const invalid = validate(tab, trimmed, password);
+    const invalid = validate(tab, trimmed, password, consent);
     if (invalid) {
       setError(invalid);
       setNotice(null);
@@ -161,6 +166,7 @@ export function LoginPage() {
                 Mínimo {MIN_PASSWORD_LENGTH} caracteres.
               </p>
             )}
+            {tab === 'signup' && <ConsentCheckbox checked={consent} onChange={setConsent} />}
             <button type="submit" disabled={busy} className={`${BUTTON} bg-lima text-petroleo`}>
               {busy ? 'Un momento…' : TABS[tab]}
             </button>
@@ -210,6 +216,12 @@ export function LoginPage() {
           </button>
         </>
       )}
+      <Link
+        to={PRIVACY_PATH}
+        className="min-h-tactil self-center px-3 py-3 text-base font-semibold text-bosque underline"
+      >
+        Política de privacidad
+      </Link>
     </main>
   );
 }

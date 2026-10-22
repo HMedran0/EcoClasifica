@@ -14,6 +14,7 @@ import { AppError } from '../src/utils/appError';
 import { createLogger } from '../src/utils/logger';
 import { memoryAiUsageRepo, rowsOf, type StoredUsage } from './helpers/aiUsageRepo';
 import { fakeDisposalRepo } from './helpers/disposalRules';
+import { memoryProfilesRepo } from './helpers/profilesRepo';
 import {
   bearer,
   fakeVerifier,
@@ -80,6 +81,7 @@ function setup({
     disposalRepo: fakeDisposalRepo(),
     aiProvider: ai,
     tokenVerifier: fakeVerifier,
+    profilesRepo: memoryProfilesRepo(),
     scansRepo: memoryScansRepo(),
     aiUsageRepo: usage,
     now,
