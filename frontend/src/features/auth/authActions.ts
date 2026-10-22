@@ -51,6 +51,27 @@ export async function signInWithGoogle(back: string): Promise<void> {
   );
 }
 
+export const RESET_PATH = '/restablecer';
+
+/**
+ * Supabase responde igual exista o no la cuenta; solo falla por límite de envíos, red o correo mal
+ * escrito. El enlace vuelve a `/restablecer` con `?code=` (PKCE).
+ */
+export async function requestPasswordReset(email: string): Promise<void> {
+  check(
+    await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}${RESET_PATH}`,
+    }),
+  );
+}
+
+/** Cambia la contraseña de la sesión de recuperación y cierra las sesiones de otros dispositivos. */
+export async function updatePassword(password: string): Promise<void> {
+  check(await supabase.auth.updateUser({ password }));
+  // La contraseña ya cambió: si esto falla (p. ej. sin internet) no se reporta como error.
+  await supabase.auth.signOut({ scope: 'others' }).catch(() => undefined);
+}
+
 export async function signOut(): Promise<void> {
   // Se limpia la sesión local aunque falle la llamada (p. ej. sin internet).
   await supabase.auth.signOut().catch(() => undefined);

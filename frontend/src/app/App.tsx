@@ -2,6 +2,7 @@ import { BrowserRouter, Route, Routes } from 'react-router';
 import { CameraPage } from '../features/camera/CameraPage';
 import { LoginPage } from '../features/auth/LoginPage';
 import { RequireAuth } from '../features/auth/RequireAuth';
+import { ResetPasswordPage } from '../features/auth/ResetPasswordPage';
 import { ChatPage } from '../features/chat/ChatPage';
 import { FavoritesPage } from '../features/favorites/FavoritesPage';
 import { ResultPage } from '../features/classify/ResultPage';
@@ -23,6 +24,7 @@ export function App() {
         <Route path="/ideas" element={<IdeasPage />} />
         <Route path="/chat" element={<ChatPage />} />
         <Route path="/entrar" element={<LoginPage />} />
+        <Route path="/restablecer" element={<ResetPasswordPage />} />
         <Route
           path="/historial"
           element={

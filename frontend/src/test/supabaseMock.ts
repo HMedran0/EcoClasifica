@@ -14,6 +14,9 @@ export const fakeAuth = {
   getSession: vi.fn(),
   refreshSession: vi.fn(),
   onAuthStateChange: vi.fn(),
+  initialize: vi.fn(),
+  resetPasswordForEmail: vi.fn(),
+  updateUser: vi.fn(),
 };
 
 export const fakeSupabase = { auth: fakeAuth };
@@ -29,6 +32,9 @@ export function resetFakeAuth(): void {
   fakeAuth.resend.mockResolvedValue({ data: {}, error: null });
   fakeAuth.signInWithOAuth.mockResolvedValue({ data: { url: 'https://g' }, error: null });
   fakeAuth.signOut.mockResolvedValue({ error: null });
+  fakeAuth.initialize.mockResolvedValue({ error: null });
+  fakeAuth.resetPasswordForEmail.mockResolvedValue({ data: {}, error: null });
+  fakeAuth.updateUser.mockResolvedValue({ data: { user: null }, error: null });
 }
 
 export function fakeSession(overrides: Partial<Session['user']> = {}): Session {

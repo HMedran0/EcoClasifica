@@ -58,6 +58,28 @@ Cambiar una variable `VITE_*` exige redesplegar: se fijan al compilar.
 - El cliente usa PKCE: el enlace de verificación abierto en otro navegador confirma el correo, pero no deja la sesión iniciada (hay que entrar con la contraseña).
 - El backend valida el token con `getClaims`: no necesita el secreto JWT (si `SUPABASE_JWT_SECRET` sigue en Railway, bórrala).
 
+### Recuperar contraseña (HU-19)
+
+- El enlace vuelve a `/restablecer`, que ya cubre el comodín `/**` de **Redirect URLs** (no hay que añadir nada).
+- Con PKCE el enlace solo funciona en el mismo dispositivo y navegador donde se pidió; en otro, la app lo explica y ofrece «Pedir otro enlace».
+- Riesgo aceptado: Supabase limita a un correo por minuto por cuenta. Dos peticiones seguidas a un correo registrado dan «espera», y a uno no registrado no, así que eso podría revelar qué correos existen. La app nunca lo dice en el texto; el límite lo aplica Supabase.
+- _Authentication → Emails → Templates → Reset password_ (en español; conserva `{{ .ConfirmationURL }}`):
+  - Asunto: `Elige una contraseña nueva para EcoClasifica`
+  - Cuerpo:
+
+    ```html
+    <h2>Recupera tu cuenta de EcoClasifica</h2>
+    <p>
+      Pediste elegir una contraseña nueva. Abre este enlace en el mismo teléfono y navegador donde
+      lo pediste:
+    </p>
+    <p><a href="{{ .ConfirmationURL }}">Elegir contraseña nueva</a></p>
+    <p>
+      El enlace vence pronto y solo sirve una vez. Si no lo pediste, ignora este correo: tu
+      contraseña no cambia.
+    </p>
+    ```
+
 ### Correo de Auth: SMTP con Gmail (F5)
 
 Sin dominio propio por ahora (proyecto universitario): el SMTP por defecto de Supabase solo envía unos pocos correos por hora, así que se usa una cuenta de Gmail.
