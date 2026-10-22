@@ -4,7 +4,7 @@ import type { ScanDeps } from '../controllers/scan.controller';
 import type { AuthMiddlewares } from '../middlewares/auth';
 import type { FavoritesDeps } from '../services/favorites.service';
 import type { HistoryDeps } from '../services/history.service';
-import type { MeDeps } from '../services/me.service';
+import type { AccountDeletionDeps, MeDeps } from '../services/me.service';
 import { createChatRoutes } from './chat.routes';
 import { createFavoritesRoutes } from './favorites.routes';
 import { healthRoutes } from './health.routes';
@@ -23,10 +23,11 @@ routes.use(healthRoutes);
 //                             GET /chat/:ideaId/messages          (HU-15)
 //   F4: me.routes.ts        → GET /api/v1/me                      (HU-04)
 //                             POST /api/v1/me/consent             (HU-21)
+//                             DELETE /api/v1/me                   (HU-22)
 //       history.routes.ts   → GET /api/v1/history, /history/:id   (HU-13)
 //       favorites.routes.ts → GET/POST /favorites, DELETE /:id    (HU-12; pantalla en HU-15)
 export function createV1Routes(
-  deps: ScanDeps & ChatControllerDeps & MeDeps & HistoryDeps & FavoritesDeps,
+  deps: ScanDeps & ChatControllerDeps & MeDeps & AccountDeletionDeps & HistoryDeps & FavoritesDeps,
   auth: AuthMiddlewares,
 ) {
   const v1 = Router();

@@ -18,6 +18,8 @@ export const ERROR_STATUS = {
   INTERNAL_ERROR: 500,
   /** Tope global diario de tokens alcanzado (HU-20): «Servicio en pausa por hoy». */
   SERVICE_PAUSED: 503,
+  /** No se pudieron borrar las fotos o el usuario (HU-22): la cuenta sigue intacta; reintentar. */
+  ACCOUNT_DELETE_FAILED: 503,
 } as const;
 
 export type ErrorCode = keyof typeof ERROR_STATUS;

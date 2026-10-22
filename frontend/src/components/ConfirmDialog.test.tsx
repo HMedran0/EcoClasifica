@@ -9,10 +9,12 @@ function Harness({
   onConfirm = vi.fn(),
   busy = false,
   error = null,
+  confirmText,
 }: {
   onConfirm?: () => void;
   busy?: boolean;
   error?: string | null;
+  confirmText?: string;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -29,6 +31,7 @@ function Harness({
           onCancel={() => setOpen(false)}
           busy={busy}
           error={error}
+          {...(confirmText === undefined ? {} : { confirmText })}
         />
       )}
     </>
@@ -118,5 +121,57 @@ describe('ConfirmDialog: foco mientras confirma', () => {
     const { opener } = openDialog();
     opener.focus();
     expect(screen.getByRole('button', { name: 'Cancelar' })).toHaveFocus();
+  });
+});
+
+describe('ConfirmDialog: confirmación escrita (HU-22)', () => {
+  const typeText = (value: string) =>
+    fireEvent.change(screen.getByLabelText('Escribe ELIMINAR para confirmar'), {
+      target: { value },
+    });
+  const confirmButton = () => screen.getByRole('button', { name: 'Eliminar' });
+
+  it('el botón destructivo empieza desactivado y el foco sigue en «Cancelar»', () => {
+    openDialog({ confirmText: 'ELIMINAR' });
+    expect(confirmButton()).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Cancelar' })).toHaveFocus();
+  });
+
+  it('solo se habilita con el texto exacto', () => {
+    const onConfirm = vi.fn();
+    openDialog({ onConfirm, confirmText: 'ELIMINAR' });
+
+    typeText('eliminar');
+    expect(confirmButton()).toBeDisabled();
+    typeText('ELIMINA');
+    expect(confirmButton()).toBeDisabled();
+    fireEvent.click(confirmButton());
+    expect(onConfirm).not.toHaveBeenCalled();
+
+    typeText(' ELIMINAR ');
+    expect(confirmButton()).toBeEnabled();
+    fireEvent.click(confirmButton());
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+  });
+
+  it('cancelar y Esc cierran sin confirmar aunque se haya escrito el texto', () => {
+    const onConfirm = vi.fn();
+    const { opener, dialog } = openDialog({ onConfirm, confirmText: 'ELIMINAR' });
+    typeText('ELIMINAR');
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(opener).toHaveFocus();
+
+    fireEvent.click(opener);
+    // Al reabrir, el texto escrito no se conserva.
+    expect(screen.getByLabelText('Escribe ELIMINAR para confirmar')).toHaveValue('');
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(onConfirm).not.toHaveBeenCalled();
+  });
+
+  it('mientras confirma, el campo también se desactiva', () => {
+    openDialog({ busy: true, confirmText: 'ELIMINAR' });
+    expect(screen.getByLabelText('Escribe ELIMINAR para confirmar')).toBeDisabled();
   });
 });

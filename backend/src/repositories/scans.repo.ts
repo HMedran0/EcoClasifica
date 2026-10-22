@@ -6,11 +6,14 @@ import {
 } from '@ecoclasifica/shared';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
-import { getSupabase } from './supabase';
+import { getSupabase, SupabaseOpError, supabaseErrorCode } from './supabase';
 
 export const SCAN_IMAGES_BUCKET = 'scan-images';
 /** Vida de las URLs firmadas de miniaturas e imágenes (10 min). */
 export const SIGNED_URL_TTL_SECONDS = 600;
+
+/** Tamaño de página al listar la carpeta de un usuario en Storage (HU-22). */
+export const STORAGE_PAGE_SIZE = 100;
 
 /** Ruta en el bucket privado: la carpeta es el usuario (lo exige la política de Storage). */
 export const scanImagePath = (userId: string, scanId: string) => `${userId}/${scanId}.jpg`;
@@ -95,6 +98,11 @@ export interface ScansRepo {
    */
   deleteAll(userId: string): Promise<DeletedScan[]>;
   removeImages(paths: string[]): Promise<void>;
+  /**
+   * HU-22: rutas de todas las imágenes de la carpeta `<userId>/` del bucket (no de las filas):
+   * así se encuentran también las que quedaron huérfanas.
+   */
+  listImagePaths(userId: string): Promise<string[]>;
 }
 
 export interface DeletedScan {
@@ -218,7 +226,26 @@ export function createSupabaseScansRepo(client: () => SupabaseClient = getSupaba
     async removeImages(paths) {
       if (paths.length === 0) return;
       const { error } = await bucket().remove(paths);
-      if (error) throw new Error(`No se pudieron borrar las imágenes: ${error.message}`);
+      if (error)
+        throw new SupabaseOpError('No se pudieron borrar las imágenes', supabaseErrorCode(error));
+    },
+
+    async listImagePaths(userId) {
+      const paths: string[] = [];
+      for (let offset = 0; ; offset += STORAGE_PAGE_SIZE) {
+        const { data, error } = await bucket().list(userId, {
+          limit: STORAGE_PAGE_SIZE,
+          offset,
+          sortBy: { column: 'name', order: 'asc' },
+        });
+        if (error) {
+          throw new SupabaseOpError('No se pudieron listar las imágenes', supabaseErrorCode(error));
+        }
+        const page = data ?? [];
+        // Las subcarpetas llegan con `id: null`; `remove` no las borra y no son imágenes.
+        for (const file of page) if (file.id !== null) paths.push(`${userId}/${file.name}`);
+        if (page.length < STORAGE_PAGE_SIZE) return paths;
+      }
     },
   };
 }

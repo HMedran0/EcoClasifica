@@ -4,12 +4,14 @@ import {
   createSupabaseScansRepo,
   SCAN_IMAGES_BUCKET,
   SIGNED_URL_TTL_SECONDS,
+  STORAGE_PAGE_SIZE,
   type NewScan,
 } from '../src/repositories/scans.repo';
+import { SupabaseOpError } from '../src/repositories/supabase';
 import { classifySaved, USER_A } from './helpers/scansRepo';
 
 type Call = [method: string, ...args: unknown[]];
-type Result = { data?: unknown; error: { message: string } | null };
+type Result = { data?: unknown; error: { message: string; statusCode?: string } | null };
 
 /**
  * Cliente de Supabase simulado: registra cada consulta como la cadena de métodos que la arma
@@ -289,10 +291,82 @@ describe('createSupabaseScansRepo: borrado (HU-14)', () => {
   });
 
   it('removeImages lanza si Storage falla y no llama sin rutas', async () => {
-    const fake = fakeSupabase({ 'storage.remove': { error: { message: 'caído' } } });
+    // El mensaje de Storage puede citar la ruta (con el uuid): solo viaja el código.
+    const fake = fakeSupabase({
+      'storage.remove': { error: { message: `Falló ${USER_A}/a.jpg`, statusCode: '503' } },
+    });
     const repo = createSupabaseScansRepo(fake.client);
     await repo.removeImages([]);
     expect(fake.storage).toHaveLength(0);
-    await expect(repo.removeImages(['a.jpg'])).rejects.toThrow('caído');
+    const err: unknown = await repo.removeImages(['a.jpg']).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(SupabaseOpError);
+    expect(err).toMatchObject({ code: '503' });
+    expect(String(err)).not.toContain(USER_A);
+  });
+});
+
+describe('createSupabaseScansRepo.listImagePaths (HU-22)', () => {
+  /** Bucket con `total` archivos en la carpeta de Ana; `list` pagina por `offset` y `limit`. */
+  function listingClient(
+    total: number,
+    error: { message: string; statusCode: string } | null = null,
+  ) {
+    const calls: unknown[][] = [];
+    const names = Array.from({ length: total }, (_, i) => ({
+      id: `obj-${i}`,
+      name: `foto-${i}.jpg`,
+    }));
+    const list = async (folder: string, opts: { limit: number; offset: number }) => {
+      calls.push([folder, opts.offset, opts.limit]);
+      return error
+        ? { data: null, error }
+        : { data: names.slice(opts.offset, opts.offset + opts.limit), error: null };
+    };
+    const client = { storage: { from: () => ({ list }) } } as unknown as SupabaseClient;
+    return { client: () => client, calls };
+  }
+
+  it('recorre todas las páginas de la carpeta del usuario', async () => {
+    const fake = listingClient(STORAGE_PAGE_SIZE * 2 + 5);
+
+    const paths = await createSupabaseScansRepo(fake.client).listImagePaths(USER_A);
+
+    expect(paths).toHaveLength(STORAGE_PAGE_SIZE * 2 + 5);
+    expect(paths[0]).toBe(`${USER_A}/foto-0.jpg`);
+    expect(fake.calls).toEqual([
+      [USER_A, 0, STORAGE_PAGE_SIZE],
+      [USER_A, STORAGE_PAGE_SIZE, STORAGE_PAGE_SIZE],
+      [USER_A, STORAGE_PAGE_SIZE * 2, STORAGE_PAGE_SIZE],
+    ]);
+  });
+
+  it('ignora las subcarpetas (Storage las lista con `id: null`)', async () => {
+    const list = async () => ({
+      data: [
+        { id: null, name: 'carpeta' },
+        { id: 'obj-1', name: 'foto.jpg' },
+      ],
+      error: null,
+    });
+    const client = { storage: { from: () => ({ list }) } } as unknown as SupabaseClient;
+
+    expect(await createSupabaseScansRepo(() => client).listImagePaths(USER_A)).toEqual([
+      `${USER_A}/foto.jpg`,
+    ]);
+  });
+
+  it('carpeta vacía: una sola consulta', async () => {
+    const fake = listingClient(0);
+    expect(await createSupabaseScansRepo(fake.client).listImagePaths(USER_A)).toEqual([]);
+    expect(fake.calls).toHaveLength(1);
+  });
+
+  it('lanza si Storage falla', async () => {
+    const fake = listingClient(3, { message: `Sin acceso a ${USER_A}/`, statusCode: '403' });
+    const err: unknown = await createSupabaseScansRepo(fake.client)
+      .listImagePaths(USER_A)
+      .catch((e: unknown) => e);
+    expect(err).toMatchObject({ code: '403' });
+    expect(String(err)).not.toContain(USER_A);
   });
 });

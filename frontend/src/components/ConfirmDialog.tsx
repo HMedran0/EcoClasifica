@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, type KeyboardEvent } from 'react';
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { BUTTON, SECONDARY } from '../features/scan/ScanScreen';
 
 interface ConfirmDialogProps {
@@ -11,12 +11,15 @@ interface ConfirmDialogProps {
   busy?: boolean;
   /** Aviso de un intento fallido; el diálogo sigue abierto para reintentar. */
   error?: string | null;
+  /** Confirmación escrita (HU-22): el botón se habilita solo al escribir exactamente este texto. */
+  confirmText?: string;
 }
 
 /** Botón destructivo: blanco sobre rojo (contraste AA). */
 const DANGER = `${BUTTON} bg-red-700 text-lg font-bold text-white disabled:opacity-60`;
 
-const FOCUSABLE = 'button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])';
+const FOCUSABLE =
+  'button:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])';
 
 /**
  * Confirmación de una acción destructiva (`role="alertdialog"`): el foco empieza en «Cancelar»,
@@ -30,9 +33,13 @@ export function ConfirmDialog({
   onCancel,
   busy = false,
   error = null,
+  confirmText,
 }: ConfirmDialogProps) {
   const titleId = useId();
   const messageId = useId();
+  const typedId = useId();
+  const [typed, setTyped] = useState('');
+  const confirmed = confirmText === undefined || typed.trim() === confirmText;
   const dialogRef = useRef<HTMLDivElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
 
@@ -120,6 +127,24 @@ export function ConfirmDialog({
             {error}
           </p>
         )}
+        {confirmText !== undefined && (
+          <div className="flex flex-col gap-2">
+            <label htmlFor={typedId} className="text-base font-semibold text-petroleo">
+              Escribe {confirmText} para confirmar
+            </label>
+            <input
+              id={typedId}
+              type="text"
+              value={typed}
+              onChange={(event) => setTyped(event.target.value)}
+              disabled={busy}
+              autoComplete="off"
+              autoCapitalize="characters"
+              spellCheck={false}
+              className="min-h-tactil rounded-2xl border-2 border-bosque px-4 text-base text-petroleo"
+            />
+          </div>
+        )}
         <div className="flex flex-col gap-3">
           <button
             ref={cancelRef}
@@ -130,7 +155,12 @@ export function ConfirmDialog({
           >
             Cancelar
           </button>
-          <button type="button" className={DANGER} onClick={onConfirm} disabled={busy}>
+          <button
+            type="button"
+            className={DANGER}
+            onClick={onConfirm}
+            disabled={busy || !confirmed}
+          >
             {busy ? 'Eliminando…' : confirmLabel}
           </button>
         </div>

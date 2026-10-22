@@ -1,4 +1,6 @@
 import { BrowserRouter, Route, Routes } from 'react-router';
+import { AccountPage } from '../features/account/AccountPage';
+import { ACCOUNT_PATH } from '../features/account/paths';
 import { CameraPage } from '../features/camera/CameraPage';
 import { LoginPage } from '../features/auth/LoginPage';
 import { RequireAuth } from '../features/auth/RequireAuth';
@@ -46,6 +48,14 @@ export function App() {
             element={
               <RequireAuth>
                 <HistoryDetailPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path={ACCOUNT_PATH}
+            element={
+              <RequireAuth>
+                <AccountPage />
               </RequireAuth>
             }
           />

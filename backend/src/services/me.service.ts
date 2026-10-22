@@ -1,7 +1,12 @@
 import { PRIVACY_VERSION, type ConsentResponse, type MeResponse } from '@ecoclasifica/shared';
+import type { Logger } from 'pino';
+import type { AccountsRepo } from '../repositories/accounts.repo';
 import type { ProfilesRepo } from '../repositories/profiles.repo';
+import type { ScansRepo } from '../repositories/scans.repo';
+import { SupabaseOpError } from '../repositories/supabase';
 import { AppError } from '../utils/appError';
 import type { AuthUser } from './auth.service';
+import { IMAGE_DELETE_BATCH } from './history.service';
 
 export interface MeDeps {
   profiles: ProfilesRepo;
@@ -51,3 +56,52 @@ export async function requireConsent(deps: MeDeps, user: AuthUser): Promise<void
     );
   }
 }
+
+export interface AccountDeletionDeps {
+  scans: ScansRepo;
+  accounts: AccountsRepo;
+}
+
+const DELETE_FAILED_MESSAGE = 'No pudimos eliminar tu cuenta. Intenta de nuevo.';
+
+/**
+ * HU-22: primero las fotos y solo después el usuario de Auth, para que no queden fotos de una
+ * cuenta borrada. Si Storage falla o quedan imágenes al volver a listar, la cuenta no se toca.
+ * Un escaneo guardado desde otro dispositivo entre la verificación y `deleteUser` lo limpia el
+ * script de imágenes huérfanas (ADR-22).
+ */
+export async function deleteAccount(
+  { scans, accounts }: AccountDeletionDeps,
+  user: AuthUser,
+  log: Logger,
+): Promise<void> {
+  await removeAllImages(scans, user.id, log);
+  try {
+    await accounts.deleteUser(user.id);
+  } catch (err) {
+    log.error({ code: errorCode(err) }, 'No se pudo borrar el usuario de Auth');
+    throw new AppError('ACCOUNT_DELETE_FAILED', DELETE_FAILED_MESSAGE);
+  }
+}
+
+async function removeAllImages(scans: ScansRepo, userId: string, log: Logger): Promise<void> {
+  let remaining: string[];
+  try {
+    const paths = await scans.listImagePaths(userId);
+    for (let i = 0; i < paths.length; i += IMAGE_DELETE_BATCH) {
+      await scans.removeImages(paths.slice(i, i + IMAGE_DELETE_BATCH));
+    }
+    remaining = await scans.listImagePaths(userId);
+  } catch (err) {
+    log.error({ code: errorCode(err) }, 'No se pudieron borrar las imágenes de la cuenta');
+    throw new AppError('ACCOUNT_DELETE_FAILED', DELETE_FAILED_MESSAGE);
+  }
+  if (remaining.length > 0) {
+    // Solo el conteo: ni rutas ni ids, que identifican al usuario.
+    log.warn({ remainingImages: remaining.length }, 'Quedaron imágenes; la cuenta no se borró');
+    throw new AppError('ACCOUNT_DELETE_FAILED', DELETE_FAILED_MESSAGE);
+  }
+}
+
+/** Solo el código de Supabase: su mensaje puede citar rutas `<userId>/…` o el uuid. */
+const errorCode = (err: unknown) => (err instanceof SupabaseOpError ? err.code : 'desconocido');

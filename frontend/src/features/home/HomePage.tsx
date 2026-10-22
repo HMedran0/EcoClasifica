@@ -4,6 +4,7 @@ import { AccountStatus } from '../auth/AccountStatus';
 import { useAuthStore } from '../auth/authStore';
 import { InstallButton } from '../../pwa/InstallButton';
 import { useOnlineStatus } from '../../pwa/useOnlineStatus';
+import { ACCOUNT_PATH } from '../account/paths';
 import { PRIVACY_PATH } from '../privacy/paths';
 import { ServiceStatus } from './ServiceStatus';
 
@@ -84,6 +85,14 @@ export function HomePage() {
           className={`${SCAN_BUTTON} border-2 border-bosque text-base font-semibold text-bosque`}
         >
           Mis favoritos
+        </Link>
+      )}
+      {signedIn && (
+        <Link
+          to={ACCOUNT_PATH}
+          className={`${SCAN_BUTTON} border-2 border-bosque text-base font-semibold text-bosque`}
+        >
+          Mi cuenta
         </Link>
       )}
       <AccountStatus />

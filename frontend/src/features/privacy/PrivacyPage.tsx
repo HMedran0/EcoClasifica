@@ -109,6 +109,13 @@ export function PrivacyPage() {
             Borrar tu historial y tu cuenta es inmediato desde la aplicación, sin pedirlo a nadie.
           </li>
           <li>
+            Para eliminar tu cuenta entra a «Mi cuenta» y elige «Eliminar mi cuenta». Primero
+            borramos tus fotos y después tu cuenta, tu historial, tus favoritos y tus
+            conversaciones. Si algo falla, no se borra nada y puedes intentarlo de nuevo. El
+            registro de uso de la IA se conserva sin ningún dato que te identifique hasta cumplir
+            sus 90 días.
+          </li>
+          <li>
             Para lo demás escríbenos a {CONTACT} o llámanos al {PHONE}. Respondemos las consultas en
             un máximo de 10 días hábiles y los reclamos en un máximo de 15 días hábiles.
           </li>

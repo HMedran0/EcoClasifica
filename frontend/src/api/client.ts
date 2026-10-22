@@ -176,6 +176,10 @@ export function createApiClient({
     /** HU-21: registra la autorización; la versión la fija el servidor, por eso no hay cuerpo. */
     acceptPrivacy: (opts?: RequestOptions): Promise<ConsentResponse> =>
       request('/api/v1/me/consent', { method: 'POST', body: {} }, consentResponseSchema, opts),
+    /** HU-22: borra las fotos y la cuenta con todos sus datos (204 sin cuerpo). */
+    deleteAccount: async (opts?: RequestOptions): Promise<void> => {
+      await request('/api/v1/me', { method: 'DELETE' }, z.unknown(), opts);
+    },
     /** Indicador de conexión de la pantalla inicial (prueba de humo de CORS en producción). */
     health: (opts?: RequestOptions): Promise<HealthResponse> =>
       request('/api/health', { method: 'GET' }, healthResponseSchema, opts),

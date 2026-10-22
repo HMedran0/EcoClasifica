@@ -129,6 +129,9 @@ export function memoryScansRepo(
     removeImages: vi.fn<ScansRepo['removeImages']>(async (paths) => {
       for (const path of paths) images.delete(path);
     }),
+    listImagePaths: vi.fn<ScansRepo['listImagePaths']>(async (userId) =>
+      [...images].filter((path) => path.startsWith(`${userId}/`)).sort(),
+    ),
   };
   return repo satisfies ScansRepo;
 }
