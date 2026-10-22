@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "node ../scripts/vitest.mjs run",
     "spike": "tsx scripts/spike-deepseek.ts",
-    "spike:chat": "tsx scripts/spike-chat.ts"
+    "spike:chat": "tsx scripts/spike-chat.ts",
+    "maintenance": "tsx scripts/maintenance.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
