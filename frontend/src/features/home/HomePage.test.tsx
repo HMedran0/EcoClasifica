@@ -25,7 +25,7 @@ describe('HomePage', () => {
     );
   });
 
-  it('con sesión enlaza a «Mi historial» y «Mis favoritos»; sin sesión no', () => {
+  it('con sesión enlaza a «Mi historial», «Mis favoritos» y «Mi cuenta»; sin sesión no', () => {
     useAuthStore.setState({ session: null, ready: true });
     const { unmount } = render(
       <MemoryRouter>
@@ -34,6 +34,7 @@ describe('HomePage', () => {
     );
     expect(screen.queryByRole('link', { name: 'Mi historial' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Mis favoritos' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Mi cuenta' })).not.toBeInTheDocument();
     unmount();
 
     useAuthStore.setState({ session: fakeSession(), ready: true });
@@ -50,6 +51,7 @@ describe('HomePage', () => {
       'href',
       '/favoritos',
     );
+    expect(screen.getByRole('link', { name: 'Mi cuenta' })).toHaveAttribute('href', '/cuenta');
     useAuthStore.setState({ session: null, ready: true });
   });
 

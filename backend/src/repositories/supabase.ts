@@ -14,3 +14,27 @@ export function getSupabase(): SupabaseClient {
   });
   return client;
 }
+
+/**
+ * Fallo de Supabase sin su mensaje, que puede citar rutas de Storage o el uuid del usuario: solo
+ * el código o el status HTTP, que es seguro registrar.
+ */
+export class SupabaseOpError extends Error {
+  constructor(
+    operation: string,
+    readonly code: string,
+  ) {
+    super(`${operation} (${code})`);
+    this.name = 'SupabaseOpError';
+  }
+}
+
+/** `code` (Auth, Postgres) o `statusCode`/`status` (Storage, Auth); si no hay, `desconocido`. */
+export function supabaseErrorCode(error: unknown): string {
+  if (typeof error !== 'object' || error === null) return 'desconocido';
+  const { code, statusCode, status } = error as Record<string, unknown>;
+  for (const value of [code, statusCode, status]) {
+    if ((typeof value === 'string' && value) || typeof value === 'number') return String(value);
+  }
+  return 'desconocido';
+}

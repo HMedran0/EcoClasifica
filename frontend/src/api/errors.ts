@@ -18,6 +18,7 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   RATE_LIMITED: 'Hiciste muchos escaneos seguidos. Espera un minuto e intenta de nuevo.',
   QUOTA_EXCEEDED: 'Llegaste al límite de hoy. Se reinicia a medianoche (hora de Colombia).',
   SERVICE_PAUSED: 'Servicio en pausa por hoy. Se reinicia a medianoche (hora de Colombia).',
+  ACCOUNT_DELETE_FAILED: 'No pudimos eliminar tu cuenta. Intenta de nuevo.',
   AI_BAD_RESPONSE: 'No pudimos analizar la foto. Intenta de nuevo.',
   AI_TIMEOUT: 'El análisis tardó demasiado. Intenta de nuevo.',
   INTERNAL_ERROR: 'Ocurrió un error inesperado. Intenta más tarde.',

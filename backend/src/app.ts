@@ -18,6 +18,7 @@ import {
 } from './repositories/chatMessages.repo';
 import { createSupabaseFavoritesRepo, type FavoritesRepo } from './repositories/favorites.repo';
 import { createSupabaseAiUsageRepo, type AiUsageRepo } from './repositories/aiUsage.repo';
+import { createSupabaseAccountsRepo, type AccountsRepo } from './repositories/accounts.repo';
 import { createSupabaseProfilesRepo, type ProfilesRepo } from './repositories/profiles.repo';
 import { createSupabaseScansRepo, type ScansRepo } from './repositories/scans.repo';
 import { createV1Routes, routes } from './routes';
@@ -44,6 +45,8 @@ export interface AppDeps {
   chatMessagesRepo?: ChatMessagesRepo;
   /** Registro y conteo de `ai_usage` inyectable (en memoria en pruebas, HU-20). */
   aiUsageRepo?: AiUsageRepo;
+  /** Usuarios de Auth inyectables (simulados en pruebas, HU-22). */
+  accountsRepo?: AccountsRepo;
   /** Reloj de la cuota diaria inyectable (las pruebas cambian de día). */
   now?: () => Date;
   /** Logger de peticiones inyectable (las pruebas capturan su salida). */
@@ -62,6 +65,7 @@ export function createApp(deps: AppDeps = {}) {
   const scans = deps.scansRepo ?? createSupabaseScansRepo();
   const favorites = deps.favoritesRepo ?? createSupabaseFavoritesRepo();
   const chatMessages = deps.chatMessagesRepo ?? createSupabaseChatMessagesRepo();
+  const accounts = deps.accountsRepo ?? createSupabaseAccountsRepo();
   const meter = createUsageMeter({
     repo: deps.aiUsageRepo ?? createSupabaseAiUsageRepo(),
     limits: {
@@ -110,7 +114,7 @@ export function createApp(deps: AppDeps = {}) {
   app.use(
     '/api/v1',
     createV1Routes(
-      { ai: aiProvider, disposal, profiles, scans, favorites, chatMessages, meter },
+      { ai: aiProvider, disposal, profiles, scans, favorites, chatMessages, accounts, meter },
       auth,
     ),
   );

@@ -6,33 +6,28 @@ _Actualizado: 2026-10-21 · Reescribir completo en cada `/handoff` (≤ 40 líne
 
 **F5 — Lanzamiento piloto: en curso.** Criterio de salida: piloto con 5 a 10 usuarios reales en San Juan Nepomuceno sin errores bloqueantes, con gasto de IA limitado y cumpliendo la Ley 1581.
 
-Orden: `fix/arranque-config` ✅ → HU-20 ✅ → HU-19 ✅ → HU-21 ✅ → HU-22 (eliminar cuenta) → `chore/F5-imagenes-huerfanas` (también purga `ai_usage` > 90 días) → `chore/F5-calidad` (Lighthouse ≥ 90).
+Orden: `fix/arranque-config` ✅ → HU-20 ✅ → HU-19 ✅ → HU-21 ✅ → HU-22 ✅ → `chore/F5-imagenes-huerfanas` (también purga `ai_usage` > 90 días) → `chore/F5-calidad` (Lighthouse ≥ 90).
 
-## Terminado hoy: HU-21 (privacidad y autorización, Ley 1581)
+## Terminado hoy: HU-22 (eliminar mi cuenta), rama `feat/HU-22-eliminar-cuenta`
 
-- `/privacidad` pública, enlazada desde la portada, `/entrar`, `/autorizacion` y la cámara. Muestra `PRIVACY_VERSION` (`shared/src/constants/privacy.ts`, hoy `2026-10-1`). Responsable: cipa 0, San Juan Nepomuceno.
-- Migración `0005_privacy_consent.sql` (ya ejecutada, en versión repetible): `profiles.privacy_version` y `privacy_accepted_at`. `anon` y `authenticated` solo pueden escribir `display_name` y `avatar_url`.
-- `POST /me/consent`: usa la versión y la hora del servidor. Si esa versión ya estaba aceptada, conserva la primera fecha. `GET /me` devuelve `privacyVersion`.
-- Sin la versión vigente: el escaneo responde `saved: false`, el chat funciona como anónimo y `POST /favorites` devuelve `403 CONSENT_REQUIRED`.
-- Frontend: `ConsentGate` lleva a `/autorizacion` si la versión no coincide y siempre deja pasar `/privacidad`, `/autorizacion` y `/restablecer`. La casilla empieza sin marcar y su enlace abre en una pestaña nueva. «No acepto» cierra la sesión.
-- Al crear una cuenta con correo, la casilla va en `user_metadata.privacy_version` y la autorización se registra al entrar. La prueba legal es la fila de `profiles`.
+- `DELETE /api/v1/me` → 204. Lista `scan-images/<user_id>/` (páginas de 100; ignora subcarpetas), borra en lotes de 100, vuelve a listar y solo si está vacía llama a `auth.admin.deleteUser`. Cascadas de `0001` verificadas; `ai_usage.user_id` → null.
+- Fallo de Storage o Auth, o imágenes restantes (`warn` solo con `remainingImages`) → `503 ACCOUNT_DELETE_FAILED` «No pudimos eliminar tu cuenta. Intenta de nuevo.», sin borrar la cuenta. Nuevo `AccountsRepo` inyectable. Los logs llevan solo el código o status de Supabase (`SupabaseOpError`), nunca su mensaje (ADR-33).
+- Frontend: `/cuenta` (RequireAuth, enlace «Mi cuenta» en la portada) con correo, política y «Eliminar mi cuenta». `ConfirmDialog` admite `confirmText` (escribir ELIMINAR). Tras borrar: portada con «Tu cuenta y tus datos fueron eliminados»; al desmontar `/cuenta` se vacían los stores y se cierra la sesión local (antes, `RequireAuth` mandaba a /entrar).
+- `/privacidad` describe el proceso (sin cambiar `PRIVACY_VERSION`: no cambia el tratamiento).
 
 ## Tareas manuales del responsable (F5)
 
-SMTP con Gmail · Google OAuth en modo de prueba · pegar la plantilla «Reset password» en Supabase · reglas de contenedores con la alcaldía · **revisión del texto de privacidad por el tutor** · ejecución del piloto.
+SMTP con Gmail · Google OAuth en modo de prueba · plantilla «Reset password» en Supabase · reglas de contenedores con la alcaldía · **revisión del texto de privacidad por el tutor** · **reemplazar los datos provisionales del responsable en `/privacidad` («cipa 0», domicilio, correo, teléfono) antes del piloto** · ejecución del piloto.
 
 ## Problemas abiertos
 
-1. La política dice que borrar la cuenta es inmediato desde la app: depende de HU-22, que debe estar antes del piloto.
-2. Las Redirect URLs de Supabase deben llevar `/**`. En Railway, borrar `SUPABASE_JWT_SECRET` si existe.
-3. Railway: confirmar `ALLOWED_ORIGINS`, el filtro `@level:error` y un 429 real de cuota.
-4. Probar HU-19 y HU-21 de punta a punta con Supabase real (registro con correo, Google y «No acepto»).
-5. Si `/me` falla (sin internet), el gate deja pasar y vuelve a intentar. El backend igual no guarda nada.
-6. Cada escaneo, chat y favorito con sesión hace una lectura extra de `profiles` (aceptado).
-7. PKCE: los enlaces de los correos solo sirven en el mismo navegador. El límite de 1 correo/min podría revelar qué correos existen (aceptado).
-8. Offline solo muestra el banner. StrictMode duplica peticiones en desarrollo. Logo y normativa sin confirmar.
-9. `ConfirmDialog` importa estilos de `ScanScreen`; `readNotice` está duplicado. Cuota no atómica (aceptado).
+1. Carrera aceptada: un escaneo guardado desde otro dispositivo entre la verificación y `deleteUser` deja una imagen huérfana → la borra `chore/F5-imagenes-huerfanas` (debe listar carpetas sin usuario en Auth).
+2. Probar HU-22 con Supabase real: borrar una cuenta con fotos y verificar Storage, tablas y `ai_usage` anonimizado.
+3. Las Redirect URLs de Supabase deben llevar `/**`. En Railway, borrar `SUPABASE_JWT_SECRET` si existe; confirmar `ALLOWED_ORIGINS` y un 429 real de cuota.
+4. Probar HU-19 y HU-21 de punta a punta con Supabase real.
+5. PKCE: los enlaces de correo solo sirven en el mismo navegador. Cuota no atómica. Lectura extra de `profiles` por petición (aceptados).
+6. `ConfirmDialog` importa estilos de `ScanScreen`; `readNotice` está duplicado; `AccountPage` reutiliza `useConfirmedDelete` de `history`.
 
 ## Siguiente acción
 
-`/story HU-22` en la rama `feat/HU-22-eliminar-cuenta`.
+Rama `chore/F5-imagenes-huerfanas` desde `main` (incluir las carpetas de `scan-images` sin usuario en Auth). Antes, probar HU-22 con Supabase real.

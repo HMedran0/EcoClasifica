@@ -12,6 +12,7 @@ Base: `/api/v1` (salud en `/api/health`). JSON siempre. Auth: `Authorization: Be
 | GET    | `/api/v1/chat/:ideaId/messages` | Sí       | Hilo guardado del chat de una idea      |
 | GET    | `/api/v1/me`                    | Sí       | Perfil del usuario con sesión           |
 | POST   | `/api/v1/me/consent`            | Sí       | Autoriza la política vigente (HU-21)    |
+| DELETE | `/api/v1/me`                    | Sí       | Elimina la cuenta y sus datos (HU-22)   |
 | GET    | `/api/v1/history`               | Sí       | Escaneos del usuario (paginado)         |
 | GET    | `/api/v1/history/:id`           | Sí       | Detalle de un escaneo                   |
 | DELETE | `/api/v1/history/:id`           | Sí       | Elimina escaneo e imagen                |
@@ -49,6 +50,16 @@ Con sesión pero sin la versión vigente autorizada (nunca o una vieja):
 - `POST /favorites` → `403 CONSENT_REQUIRED`. Leer y borrar los propios datos sigue permitido.
 
 El frontend (`ConsentGate`) lleva a `/autorizacion` tras iniciar sesión si `privacyVersion` no es la vigente. Si el usuario marcó la casilla al registrarse con correo (`user_metadata.privacy_version`), registra la autorización sin volver a preguntar. La prueba legal es la fila de `profiles`, no los metadatos: el usuario puede escribir sus propios `user_metadata`, así que solo sirven para no volver a preguntar.
+
+## DELETE /me (HU-22)
+
+Sin cuerpo. Responde `204` sin cuerpo. Orden:
+
+1. Lista la carpeta `scan-images/<user_id>/` (de 100 en 100) y borra sus imágenes en lotes de 100. Se lista la carpeta, no las filas de `scans`, para borrar también las huérfanas.
+2. Vuelve a listar. Si quedan imágenes, registra un `warn` solo con el conteo (`remainingImages`) y no borra la cuenta.
+3. `auth.admin.deleteUser(user.id)` con la service role. La base borra en cascada `profiles`, `scans`, `scan_ideas`, `favorites` y `chat_messages`; `ai_usage.user_id` pasa a `null` (registro anónimo de costos).
+
+Si falla Storage, la verificación o Auth → `503 ACCOUNT_DELETE_FAILED` «No pudimos eliminar tu cuenta. Intenta de nuevo.», sin borrar el usuario. Reintentar es seguro. Un escaneo guardado desde otro dispositivo entre la verificación y `deleteUser` lo limpia el script de imágenes huérfanas de F5 (ADR-33).
 
 ## POST /scan/classify
 
@@ -269,22 +280,23 @@ Requiere sesión. Respuesta 200 (`chatHistoryResponseSchema`): `{ items: [{ role
 
 Forma única: `{ "error": { "code": "...", "message": "...", "requestId": "..." } }`.
 
-| HTTP | `code`              | Cuándo                                         |
-| ---- | ------------------- | ---------------------------------------------- |
-| 400  | `VALIDATION_ERROR`  | El cuerpo no cumple el esquema (salvo `image`) |
-| 400  | `INVALID_IMAGE`     | Falla `image`: falta, tamaño, Base64 o tipo    |
-| 401  | `UNAUTHORIZED`      | Token ausente o inválido en endpoint protegido |
-| 403  | `CONSENT_REQUIRED`  | Favorito sin autorizar la política (HU-21)     |
-| 404  | `NOT_FOUND`         | No existe o no es del usuario                  |
-| 413  | `PAYLOAD_TOO_LARGE` | Cuerpo > 6 MB                                  |
-| 422  | `NOT_A_WASTE`       | La imagen no contiene un residuo               |
-| 422  | `UNSAFE_REQUEST`    | Idea del chat con un término bloqueado         |
-| 429  | `RATE_LIMITED`      | Límite por minuto por IP                       |
-| 429  | `QUOTA_EXCEEDED`    | Cuota diaria de IA agotada (HU-20)             |
-| 502  | `AI_BAD_RESPONSE`   | JSON inválido o truncado tras el reintento     |
-| 504  | `AI_TIMEOUT`        | DeepSeek no respondió en 20 s                  |
-| 500  | `INTERNAL_ERROR`    | Error no controlado                            |
-| 503  | `SERVICE_PAUSED`    | Tope global diario de tokens (HU-20)           |
+| HTTP | `code`                  | Cuándo                                         |
+| ---- | ----------------------- | ---------------------------------------------- |
+| 400  | `VALIDATION_ERROR`      | El cuerpo no cumple el esquema (salvo `image`) |
+| 400  | `INVALID_IMAGE`         | Falla `image`: falta, tamaño, Base64 o tipo    |
+| 401  | `UNAUTHORIZED`          | Token ausente o inválido en endpoint protegido |
+| 403  | `CONSENT_REQUIRED`      | Favorito sin autorizar la política (HU-21)     |
+| 404  | `NOT_FOUND`             | No existe o no es del usuario                  |
+| 413  | `PAYLOAD_TOO_LARGE`     | Cuerpo > 6 MB                                  |
+| 422  | `NOT_A_WASTE`           | La imagen no contiene un residuo               |
+| 422  | `UNSAFE_REQUEST`        | Idea del chat con un término bloqueado         |
+| 429  | `RATE_LIMITED`          | Límite por minuto por IP                       |
+| 429  | `QUOTA_EXCEEDED`        | Cuota diaria de IA agotada (HU-20)             |
+| 502  | `AI_BAD_RESPONSE`       | JSON inválido o truncado tras el reintento     |
+| 504  | `AI_TIMEOUT`            | DeepSeek no respondió en 20 s                  |
+| 500  | `INTERNAL_ERROR`        | Error no controlado                            |
+| 503  | `SERVICE_PAUSED`        | Tope global diario de tokens (HU-20)           |
+| 503  | `ACCOUNT_DELETE_FAILED` | No se pudo eliminar la cuenta (HU-22)          |
 
 ## Cuota diaria de IA (HU-20)
 
