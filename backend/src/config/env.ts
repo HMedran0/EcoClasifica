@@ -52,6 +52,19 @@ export const envSchema = z.object({
         .filter(Boolean),
     ),
   DEFAULT_MUNICIPALITY_CODE: z.string().default('13657'),
+
+  // HU-20: cuota diaria de IA (día de America/Bogota). Sin sesión se cuenta por IP: con CGNAT
+  // muchos usuarios comparten una IP, así que el límite anónimo no puede ser muy bajo.
+  QUOTA_USER_SCANS: z.coerce.number().int().positive().default(60),
+  QUOTA_USER_CHAT: z.coerce.number().int().positive().default(100),
+  QUOTA_ANON_SCANS: z.coerce.number().int().positive().default(30),
+  QUOTA_ANON_CHAT: z.coerce.number().int().positive().default(60),
+  /** Freno de emergencia: tokens de todo el servicio por día. */
+  AI_DAILY_TOKEN_CAP: z.coerce.number().int().positive().default(1_000_000),
+  /** Fracción del tope a partir de la cual se corta a los anónimos; el resto es para cuentas. */
+  AI_ANON_TOKEN_SHARE: z.coerce.number().gt(0).max(1).default(0.7),
+  /** Sal del HMAC de la IP (`ai_usage.ip_hash`). Obligatoria en producción, ≥ 32 caracteres. */
+  IP_HASH_SALT: z.string().optional(),
 });
 
 /** Una variable vacía (`KEY=` copiada de .env.example) cuenta como no definida. */
@@ -69,7 +82,11 @@ export const PRODUCTION_REQUIRED_VARS = [
   'DEEPSEEK_API_KEY',
   'SUPABASE_URL',
   'SUPABASE_SERVICE_ROLE_KEY',
+  'IP_HASH_SALT',
 ] as const;
+
+/** Una sal corta permite recuperar IPs por fuerza bruta (solo hay ~4 300 millones de IPv4). */
+export const IP_HASH_SALT_MIN_LENGTH = 32;
 
 /** Solo para desarrollo y pruebas: en producción ALLOWED_ORIGINS es obligatoria. */
 export const DEV_ALLOWED_ORIGINS = ['http://localhost:5173'];
@@ -99,6 +116,9 @@ export function productionConfigErrors(config: Env): ProductionConfigErrors {
   const origins = config.ALLOWED_ORIGINS;
   if (!origins?.length) missing.push('ALLOWED_ORIGINS');
   else if (!origins.every(isValidOrigin)) invalid.push('ALLOWED_ORIGINS');
+  if (config.IP_HASH_SALT && config.IP_HASH_SALT.length < IP_HASH_SALT_MIN_LENGTH) {
+    invalid.push('IP_HASH_SALT');
+  }
   return { missing, invalid };
 }
 

@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { useEffect, useRef, useState, type FormEvent, type RefObject } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router';
 import { api } from '../../api/client';
+import { isUntilTomorrow } from '../../api/errors';
 import { useAuthStore } from '../auth/authStore';
 import { usePhotoStore } from '../camera/photoStore';
 import { PRIMARY, SECONDARY, TITLE } from '../scan/ScanScreen';
@@ -277,7 +278,7 @@ function StatusView({ status, onRetry }: { status: ChatStatus; onRetry: () => vo
   return (
     <div role="alert" className="flex flex-col gap-2 rounded-2xl border-2 border-bosque p-4">
       <p className="text-base text-bosque">{status.message}</p>
-      {status.code !== 'UNSAFE_REQUEST' && (
+      {status.code !== 'UNSAFE_REQUEST' && !isUntilTomorrow(status.code) && (
         <button type="button" className={SECONDARY} onClick={onRetry}>
           Reintentar
         </button>

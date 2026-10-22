@@ -25,7 +25,7 @@ Estados: Pendiente · En curso · Hecha. Prioridad: M = MVP, D = deseable. Cada 
 | HU-17 | Pantalla de resultado (UI de HU-05, HU-06 y HU-07)                                    | M    | F2   | Hecha     |
 | HU-18 | Botón «Instalar app» en la portada (`beforeinstallprompt`, solo si no está instalada) | D    | F3   | Hecha     |
 | HU-19 | Recuperar contraseña (enlace por correo; fuera de alcance de HU-04)                   | M    | F5   | Pendiente |
-| HU-20 | Cuota diaria de IA (`ai_usage`, por usuario, por IP y tope global)                    | M    | F5   | Pendiente |
+| HU-20 | Cuota diaria de IA (`ai_usage`, por usuario, por IP y tope global)                    | M    | F5   | Hecha     |
 | HU-21 | Privacidad y autorización de datos (Ley 1581)                                         | M    | F5   | Pendiente |
 | HU-22 | Eliminar mi cuenta (derecho de supresión)                                             | M    | F5   | Pendiente |
 
@@ -46,7 +46,7 @@ Orden de F3: HU-09 (`POST /scan/upcycle` e ideas) ✅ → HU-03 (interruptor de 
 
 Orden de F4: HU-04 ✅ → HU-13 ✅ → HU-12 ✅ → HU-15 ✅ → HU-14 ✅. HU-08 y HU-16 pasan a v1.1. **Criterio de salida cumplido (2026-10-20):** en producción, Lighthouse móvil Performance 96 y Accesibilidad 100. Lighthouse 12 ya no tiene categoría PWA: se verificaron el manifiesto (standalone, íconos) y `sw.js`. Prueba manual completa de HU-04, HU-12, HU-13, HU-14 y HU-15, con aislamiento entre dos cuentas (URL ajena → 404) y borrado verificado en Storage. CI de `main` en verde.
 
-Orden de F5: `fix/arranque-config` ✅ → HU-20 (cuota diaria de IA) → HU-19 (recuperar contraseña) → HU-21 (privacidad y autorización) → HU-22 (eliminar cuenta) → `chore/F5-imagenes-huerfanas` (script que borra de `scan-images` las imágenes sin fila en `scans`; los `warn` «pendiente de limpiar» de HU-14 dan los `scanId`) → `chore/F5-calidad` (Lighthouse ≥ 90 en Performance y Accesibilidad, RNF-03).
+Orden de F5: `fix/arranque-config` ✅ → HU-20 (cuota diaria de IA) ✅ → HU-19 (recuperar contraseña) → HU-21 (privacidad y autorización) → HU-22 (eliminar cuenta) → `chore/F5-imagenes-huerfanas` (script que borra de `scan-images` las imágenes sin fila en `scans`; los `warn` «pendiente de limpiar» de HU-14 dan los `scanId`; también borra las filas de `ai_usage` con más de 90 días, usando el índice `ai_usage_created_idx` de `0004`) → `chore/F5-calidad` (Lighthouse ≥ 90 en Performance y Accesibilidad, RNF-03).
 
 Tareas manuales de F5 (del responsable, no de Claude Code; pasos en `docs/despliegue.md`). Sin dominio propio por ahora (proyecto universitario):
 

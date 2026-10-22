@@ -5,6 +5,7 @@ import type {
   ChatRequest,
   ImageMime,
 } from '@ecoclasifica/shared';
+import { AppError } from '../../utils/appError';
 
 export interface ImageInput {
   /** Base64 sin el prefijo `data:`. */
@@ -15,6 +16,22 @@ export interface ImageInput {
 export interface AiUsage {
   promptTokens: number;
   completionTokens: number;
+}
+
+/**
+ * Fallo de una llamada que ya gastó tokens (p. ej. JSON inválido tras el reintento): `ai_usage`
+ * los registra porque también cuestan (HU-20).
+ */
+export class AiCallError extends AppError {
+  constructor(
+    code: AppError['code'],
+    message: string,
+    readonly usage: AiUsage,
+    details?: unknown,
+  ) {
+    super(code, message, details);
+    this.name = 'AiCallError';
+  }
 }
 
 export interface AiResult<T> {

@@ -6,7 +6,7 @@ import {
 } from '@ecoclasifica/shared';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createApiClient, REQUEST_TIMEOUT_MS } from './client';
-import { ApiError, errorMessage } from './errors';
+import { ApiError, errorMessage, isUntilTomorrow } from './errors';
 
 const body = { image: 'A'.repeat(100), mimeType: 'image/jpeg' as const };
 
@@ -65,7 +65,8 @@ describe('api.classify', () => {
     expect(err.code).toBe('UNEXPECTED_RESPONSE');
   });
 
-  it.each(Object.keys(ERROR_STATUS) as ErrorCode[])(
+  // La cuota (HU-20) usa el mensaje del servidor: se prueba aparte.
+  it.each((Object.keys(ERROR_STATUS) as ErrorCode[]).filter((code) => !isUntilTomorrow(code)))(
     'traduce %s del backend a un mensaje en español',
     async (code) => {
       const status = ERROR_STATUS[code];
@@ -188,6 +189,14 @@ describe('api.upcycle', () => {
     const err = await apiErrorOf(client(fetchFn).upcycle(body));
     expect(err).toMatchObject({ code: 'NOT_A_WASTE', status: 422, requestId: 'r1' });
     expect(err.message).toBe(errorMessage('NOT_A_WASTE'));
+  });
+
+  it('QUOTA_EXCEEDED conserva el mensaje del servidor (dice qué límite se alcanzó)', async () => {
+    const message = 'Llegaste al límite de hoy: 60 escaneos.';
+    const error = { error: { code: 'QUOTA_EXCEEDED', message, requestId: 'r2' } };
+    const fetchFn = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(429, error));
+    const err = await apiErrorOf(client(fetchFn).upcycle(body));
+    expect(err).toMatchObject({ code: 'QUOTA_EXCEEDED', status: 429, message });
   });
 
   it('aborta y rechaza con REQUEST_TIMEOUT con el mismo plazo', async () => {

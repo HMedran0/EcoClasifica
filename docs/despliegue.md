@@ -24,15 +24,17 @@ Ambos despliegan la rama `main` automáticamente. Railway espera a que pase el C
 - Settings → Networking → _Generate Domain_. No definas `PORT`: Railway la inyecta.
 - Variables:
 
-| Variable                              | Valor                                                                                                |
-| ------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `NODE_ENV`                            | `production`                                                                                         |
-| `DEEPSEEK_API_KEY`                    | secreta                                                                                              |
-| `DEEPSEEK_MODEL`, `DEEPSEEK_BASE_URL` | solo si difieren del valor por defecto                                                               |
-| `SUPABASE_URL`                        | `https://<proyecto>.supabase.co` (**sin** `/rest/v1`)                                                |
-| `SUPABASE_SERVICE_ROLE_KEY`           | secreta                                                                                              |
-| `ALLOWED_ORIGINS`                     | `https://eco-clasifica.vercel.app` (obligatoria; varios separados por coma; `https` y sin `/` final) |
-| `DEFAULT_MUNICIPALITY_CODE`           | `13657`                                                                                              |
+| Variable                                               | Valor                                                                                                              |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `NODE_ENV`                                             | `production`                                                                                                       |
+| `DEEPSEEK_API_KEY`                                     | secreta                                                                                                            |
+| `DEEPSEEK_MODEL`, `DEEPSEEK_BASE_URL`                  | solo si difieren del valor por defecto                                                                             |
+| `SUPABASE_URL`                                         | `https://<proyecto>.supabase.co` (**sin** `/rest/v1`)                                                              |
+| `SUPABASE_SERVICE_ROLE_KEY`                            | secreta                                                                                                            |
+| `ALLOWED_ORIGINS`                                      | `https://eco-clasifica.vercel.app` (obligatoria; varios separados por coma; `https` y sin `/` final)               |
+| `DEFAULT_MUNICIPALITY_CODE`                            | `13657`                                                                                                            |
+| `IP_HASH_SALT`                                         | secreta, ≥ 32 caracteres (obligatoria; `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`) |
+| `QUOTA_*`, `AI_DAILY_TOKEN_CAP`, `AI_ANON_TOKEN_SHARE` | solo si difieren de 60/100 (usuario), 30/60 (IP) y 1 000 000 tokens con corte de anónimos al 0,7 (HU-20)           |
 
 ## 2. Vercel (frontend)
 

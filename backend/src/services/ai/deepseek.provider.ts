@@ -7,7 +7,14 @@ import {
 } from '@ecoclasifica/shared';
 import type { ZodType, ZodTypeDef } from 'zod';
 import { AppError } from '../../utils/appError';
-import type { AiProvider, AiResult, AiUsage, IdeaContext, ImageInput } from './ai.provider';
+import {
+  AiCallError,
+  type AiProvider,
+  type AiResult,
+  type AiUsage,
+  type IdeaContext,
+  type ImageInput,
+} from './ai.provider';
 import {
   CLASSIFY_SYSTEM,
   CLASSIFY_USER,
@@ -101,6 +108,11 @@ export class DeepSeekProvider implements AiProvider {
       const { content, usage, latencyMs, truncated } = await this.complete(messages, {
         json: true,
         maxTokens: this.cfg.maxTokens,
+      }).catch((err: unknown) => {
+        // Un timeout en el reintento no borra los tokens del primer intento.
+        throw err instanceof AppError
+          ? new AiCallError(err.code, err.message, { ...total }, err.details)
+          : err;
       });
       total.promptTokens += usage.promptTokens;
       total.completionTokens += usage.completionTokens;
@@ -118,9 +130,12 @@ export class DeepSeekProvider implements AiProvider {
         lastReason = 'JSON inválido';
       }
     }
-    throw new AppError('AI_BAD_RESPONSE', 'No pudimos analizar la imagen, intenta de nuevo', {
-      reason: lastReason,
-    });
+    throw new AiCallError(
+      'AI_BAD_RESPONSE',
+      'No pudimos analizar la imagen, intenta de nuevo',
+      total,
+      { reason: lastReason },
+    );
   }
 
   private async complete(messages: ApiMessage[], opts: { json: boolean; maxTokens: number }) {

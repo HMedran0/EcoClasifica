@@ -21,6 +21,7 @@ ai_usage   → profiles, scans         (solo lo usa el backend)
 - **Reglas en datos:** `disposal_rules` permite regla `DEFAULT` y reglas por municipio sin redesplegar.
 - **Solo usuarios autenticados guardan:** los escaneos anónimos no llegan a `scans`.
 - **Copia del resultado (`0003_scans_result.sql`):** `scans.result` (jsonb, `not null`, `check` de objeto) guarda lo que vio el usuario. El detalle del historial se arma desde ahí, sin la IA y sin depender de las reglas vigentes. Las columnas sueltas (`object_name`, `material_code`, …) se conservan para filtros (HU-16).
+- **Cuota de IA (`0004_ai_usage_quota.sql`, HU-20):** `ai_usage.ip_hash` (HMAC-SHA256 de la IP con `IP_HASH_SALT`, solo sin sesión; nunca la IP), índices `(ip_hash, created_at)` y `(created_at)`, y la función `ai_tokens_since(since)` para el tope global (solo `service_role`). Las filas con más de 90 días se borran en el script de mantenimiento de F5.
 - **Chat ligado a la idea:** `chat_messages` se borra con la idea.
 
 ## Reglas de disposición (semilla)

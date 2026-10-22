@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, type ReactNode } from 'react';
-import type { ApiErrorCode } from '../../api/errors';
+import { isUntilTomorrow, type ApiErrorCode } from '../../api/errors';
 import { ModeBadge } from '../camera/ModeSwitch';
 import type { ScanMode } from '../camera/scanModeStore';
 import type { ScanState } from './useScan';
@@ -90,7 +90,10 @@ export function pendingActions<T>(
   const takeAnother = { label: 'Tomar otra foto', onClick: backToCamera };
   if (state.kind === 'loading') return [{ label: 'Cancelar', onClick: backToCamera }];
   if (state.kind === 'success') return null;
-  if (state.code === 'NOT_A_WASTE') return [{ ...takeAnother, primary: true }];
+  // Con la cuota agotada (HU-20) reintentar no sirve hasta mañana.
+  if (state.code === 'NOT_A_WASTE' || isUntilTomorrow(state.code)) {
+    return [{ ...takeAnother, primary: true }];
+  }
   return [{ label: 'Reintentar', onClick: retry, primary: true }, takeAnother];
 }
 
@@ -111,11 +114,17 @@ function Loading({ label }: { label: string }) {
   );
 }
 
+const ERROR_TITLES: Partial<Record<ApiErrorCode, string>> = {
+  NOT_A_WASTE: 'No parece un residuo',
+  QUOTA_EXCEEDED: 'Llegaste al límite de hoy',
+  SERVICE_PAUSED: 'Servicio en pausa por hoy',
+};
+
 function ErrorNotice({ code, message }: { code: ApiErrorCode; message: string }) {
   return (
     <div role="alert" className="flex flex-col gap-2">
       <h1 tabIndex={-1} className={TITLE}>
-        {code === 'NOT_A_WASTE' ? 'No parece un residuo' : 'No pudimos analizar la foto'}
+        {ERROR_TITLES[code] ?? 'No pudimos analizar la foto'}
       </h1>
       <p className="text-base text-bosque">{message}</p>
     </div>

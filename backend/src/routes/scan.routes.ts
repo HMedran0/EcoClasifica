@@ -14,12 +14,15 @@ export function createScanRoutes(deps: ScanDeps, auth: AuthMiddlewares) {
     '/scan/classify',
     auth.optionalAuth,
     validate(scanRequestSchema),
+    // HU-20: antes de llamar a la IA; classify y upcycle comparten la cuota de escaneos.
+    deps.meter.checkQuota('scan'),
     asyncHandler(controller.classify),
   );
   router.post(
     '/scan/upcycle',
     auth.optionalAuth,
     validate(scanRequestSchema),
+    deps.meter.checkQuota('scan'),
     asyncHandler(controller.upcycle),
   );
   return router;

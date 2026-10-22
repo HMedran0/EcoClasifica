@@ -212,6 +212,26 @@ describe('ChatPage', () => {
     expect(within(alert).queryByRole('button')).not.toBeInTheDocument();
   });
 
+  it('QUOTA_EXCEEDED: muestra el límite del servidor sin Reintentar (HU-20)', async () => {
+    const message =
+      'Llegaste al límite de hoy: 100 mensajes de chat. Se reinicia a medianoche (hora de Colombia).';
+    openChat(
+      vi.fn<ChatRequest>().mockRejectedValue(new ApiError('QUOTA_EXCEEDED', 429, 'r1', message)),
+    );
+    ask('Hola');
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(message);
+    expect(within(alert).queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('SERVICE_PAUSED: «Servicio en pausa por hoy» sin Reintentar', async () => {
+    openChat(vi.fn<ChatRequest>().mockRejectedValue(new ApiError('SERVICE_PAUSED', 503)));
+    ask('Hola');
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Servicio en pausa por hoy');
+    expect(within(alert).queryByRole('button')).not.toBeInTheDocument();
+  });
+
   it('conserva el hilo al volver a /ideas y regresar', async () => {
     renderApp(answering());
     fireEvent.click(screen.getByRole('button', { name: 'Portalápices' }));

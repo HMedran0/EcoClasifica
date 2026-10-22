@@ -39,6 +39,7 @@ describe('productionConfigErrors', () => {
     DEEPSEEK_API_KEY: 'sk-prueba',
     SUPABASE_URL: 'https://abc.supabase.co',
     SUPABASE_SERVICE_ROLE_KEY: 'service-role-prueba',
+    IP_HASH_SALT: 'x'.repeat(32),
     ALLOWED_ORIGINS: 'https://eco-clasifica.vercel.app',
   };
   const parse = (vars: Record<string, string>) => envSchema.parse(vars);
@@ -56,6 +57,7 @@ describe('productionConfigErrors', () => {
       'DEEPSEEK_API_KEY',
       'SUPABASE_URL',
       'SUPABASE_SERVICE_ROLE_KEY',
+      'IP_HASH_SALT',
       'ALLOWED_ORIGINS',
     ]);
     const withoutUrl = Object.fromEntries(
@@ -64,6 +66,20 @@ describe('productionConfigErrors', () => {
     expect(productionConfigErrors(parse({ NODE_ENV: 'production', ...withoutUrl }))).toEqual({
       missing: ['SUPABASE_URL'],
       invalid: [],
+    });
+  });
+
+  it('AI_ANON_TOKEN_SHARE vale 0,7 por defecto y debe estar entre 0 y 1', () => {
+    expect(parse({}).AI_ANON_TOKEN_SHARE).toBe(0.7);
+    expect(parse({ AI_ANON_TOKEN_SHARE: '0.5' }).AI_ANON_TOKEN_SHARE).toBe(0.5);
+    expect(() => parse({ AI_ANON_TOKEN_SHARE: '0' })).toThrow();
+    expect(() => parse({ AI_ANON_TOKEN_SHARE: '1.5' })).toThrow();
+  });
+
+  it('IP_HASH_SALT corta es inválida', () => {
+    expect(production({ IP_HASH_SALT: 'corta' })).toEqual({
+      missing: [],
+      invalid: ['IP_HASH_SALT'],
     });
   });
 
